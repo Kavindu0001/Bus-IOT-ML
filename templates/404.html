@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Page Not Found - Anomaly Detection System</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="container error-container">
+        <div class="error-content">
+            <div class="error-icon">
+                <i class="fas fa-exclamation-triangle fa-5x"></i>
+            </div>
+            <h1>404 - Page Not Found</h1>
+            <p class="error-message">
+                The page you are looking for might have been removed,
+                had its name changed, or is temporarily unavailable.
+            </p>
+            <div class="error-actions">
+                <a href="/" class="btn btn-primary">
+                    <i class="fas fa-home"></i> Go to Homepage
+                </a>
+                <a href="/dashboard" class="btn btn-secondary">
+                    <i class="fas fa-tachometer-alt"></i> Go to Dashboard
+                </a>
+                <button onclick="history.back()" class="btn btn-info">
+                    <i class="fas fa-arrow-left"></i> Go Back
+                </button>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

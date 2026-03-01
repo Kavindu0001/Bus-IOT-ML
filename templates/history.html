@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Travel History - Anomaly Detection</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="container history-container">
+        <header class="history-header">
+            <h1><i class="fas fa-history"></i> Travel History</h1>
+            <div class="header-actions">
+                <button class="btn btn-secondary" onclick="location.href='/dashboard'">
+                    <i class="fas fa-tachometer-alt"></i> Dashboard
+                </button>
+                <button class="btn btn-primary" onclick="location.href='/'">
+                    <i class="fas fa-home"></i> Home
+                </button>
+            </div>
+        </header>
+
+        <!-- Filters -->
+        <div class="filters-card">
+            <h3><i class="fas fa-filter"></i> Filters</h3>
+            <form method="GET" action="/history" class="filter-form">
+                <div class="filter-grid">
+                    <div class="form-group">
+                        <label for="passenger_id">Passenger ID:</label>
+                        <select id="passenger_id" name="passenger_id">
+                            <option value="">All Passengers</option>
+                            {% for pid in passenger_ids %}
+                            <option value="{{ pid }}" {% if filters.passenger_id == pid %}selected{% endif %}>
+                                {{ pid }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="date">Date:</label>
+                        <input type="date" id="date" name="date" value="{{ filters.date or '' }}">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="alert_type">Alert Type:</label>
+                        <select id="alert_type" name="alert_type">
+                            <option value="">All Types</option>
+                            <option value="normal">Normal Only</option>
+                            <option value="anomaly">Anomalies Only</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="filter-actions">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-search"></i> Apply Filters
+                    </button>
+                    <button type="button" class="btn btn-secondary" onclick="resetFilters()">
+                        <i class="fas fa-redo"></i> Reset
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Statistics -->
+        <div class="stats-summary">
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-users"></i>
+                </div>
+                <div class="stat-content">
+                    <div class="stat-value">{{ journeys|length }}</div>
+                    <div class="stat-label">Total Journeys</div>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <div class="stat-content">
+                    <div class="stat-value">
+                        {{ journeys|selectattr('exit_time')|list|length }}
+                    </div>
+                    <div class="stat-label">Completed</div>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <div class="stat-content">
+                    <div class="stat-value">0</div>
+                    <div class="stat-label">Anomalies</div>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-clock"></i>
+                </div>
+                <div class="stat-content">
+                    <div class="stat-value">
+                        {% set total_time = journeys|sum(attribute='travel_time_seconds') %}
+                        {{ (total_time // 3600) }}h
+                    </div>
+                    <div class="stat-label">Total Travel Time</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Journeys List -->
+        <div class="journeys-list">
+            <h3><i class="fas fa-list"></i> Journeys</h3>
+
+            {% if journeys %}
+            <div class="table-container">
+                <table class="journeys-table">
+                    <thead>
+                        <tr>
+                            <th>Journey ID</th>
+                            <th>Passenger ID</th>
+                            <th>Bus Turn</th>
+                            <th>Entrance Time</th>
+                            <th>Exit Time</th>
+                            <th>Duration</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for journey in journeys %}
+                        <tr>
+                            <td>{{ journey.journey_id[:8] }}...</td>
+                            <td>
+                                <a href="#" onclick="showPassengerDetails('{{ journey.passenger_id }}')">
+                                    {{ journey.passenger_id }}
+                                </a>
+                            </td>
+                            <td>{{ journey.bus_turn_id }}</td>
+                            <td>{{ journey.entrance_time.strftime('%H:%M:%S') }}</td>
+                            <td>
+                                {% if journey.exit_time %}
+                                {{ journey.exit_time.strftime('%H:%M:%S') }}
+                                {% else %}
+                                <span class="status-badge warning">In Progress</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if journey.travel_time_seconds %}
+                                {{ journey.travel_time_seconds // 60 }}min
+                                {% else %}
+                                -
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% set alerts = db_config.db.alerts.find({'journey_id': journey.journey_id}).count() %}
+                                {% if alerts > 0 %}
+                                <span class="status-badge danger">Anomaly</span>
+                                {% else %}
+                                <span class="status-badge success">Normal</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <button class="btn-action" onclick="viewJourneyDetails('{{ journey.journey_id }}')">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                <button class="btn-action" onclick="exportJourney('{{ journey.journey_id }}')">
+                                    <i class="fas fa-download"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            <div class="pagination">
+                <button class="btn-pagination" disabled>
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                <span class="page-info">Page 1 of 1</span>
+                <button class="btn-pagination">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+
+            {% else %}
+            <div class="no-results">
+                <i class="fas fa-search fa-3x"></i>
+                <h3>No journeys found</h3>
+                <p>Try adjusting your filters or start a new bus turn</p>
+                <button class="btn btn-primary" onclick="location.href='/'">
+                    <i class="fas fa-play-circle"></i> Start Bus Turn
+                </button>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Export Options -->
+        <div class="export-options">
+            <h3><i class="fas fa-file-export"></i> Export Data</h3>
+            <div class="export-buttons">
+                <button class="btn btn-secondary" onclick="exportCSV()">
+                    <i class="fas fa-file-csv"></i> Export as CSV
+                </button>
+                <button class="btn btn-secondary" onclick="exportJSON()">
+                    <i class="fas fa-file-code"></i> Export as JSON
+                </button>
+                <button class="btn btn-primary" onclick="generateReport()">
+                    <i class="fas fa-file-pdf"></i> Generate Full Report
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Journey Details Modal -->
+    <div class="modal" id="journeyModal">
+        <div class="modal-content wide-modal">
+            <div class="modal-header">
+                <h3><i class="fas fa-route"></i> Journey Details</h3>
+                <button class="modal-close" onclick="closeJourneyModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body" id="journeyDetails">
+                <!-- Details will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script>
+        function resetFilters() {
+            document.querySelector('.filter-form').reset();
+            window.location.href = '/history';
+        }
+
+        function showPassengerDetails(passengerId) {
+            fetch(`/api/passenger_history/${passengerId}`)
+                .then(response => response.json())
+                .then(data => {
+                    const modal = document.getElementById('journeyModal');
+                    const content = document.getElementById('journeyDetails');
+
+                    let html = `
+                        <div class="passenger-info">
+                            <h4>Passenger: ${passengerId}</h4>
+                            <p>Total Journeys: ${data.journeys.length}</p>
+                        </div>
+                        <div class="journey-timeline">
+                    `;
+
+                    data.journeys.forEach(journey => {
+                        html += `
+                            <div class="timeline-item">
+                                <div class="timeline-time">${journey.entrance_time}</div>
+                                <div class="timeline-content">
+                                    <h5>${journey.journey_id}</h5>
+                                    <p>Bus Turn: ${journey.bus_turn_id}</p>
+                                    ${journey.exit_time ?
+                                        `<p>Duration: ${Math.floor(journey.travel_time_seconds / 60)} minutes</p>` :
+                                        '<p class="warning">In Progress</p>'
+                                    }
+                                </div>
+                            </div>
+                        `;
+                    });
+
+                    html += `</div>`;
+                    content.innerHTML = html;
+                    modal.style.display = 'flex';
+                })
+                .catch(console.error);
+        }
+
+        function viewJourneyDetails(journeyId) {
+            // Implement journey details view
+            alert(`View details for journey: ${journeyId}`);
+        }
+
+        function exportJourney(journeyId) {
+            alert(`Export journey: ${journeyId}`);
+        }
+
+        function exportCSV() {
+            alert('CSV export feature coming soon!');
+        }
+
+        function exportJSON() {
+            alert('JSON export feature coming soon!');
+        }
+
+        function generateReport() {
+            alert('Report generation feature coming soon!');
+        }
+
+        function closeJourneyModal() {
+            document.getElementById('journeyModal').style.display = 'none';
+        }
+
+        // Close modal on outside click
+        window.onclick = function(event) {
+            const modal = document.getElementById('journeyModal');
+            if (event.target == modal) {
+                closeJourneyModal();
+            }
+        }
+    </script>
+</body>
+</html>

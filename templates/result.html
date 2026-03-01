@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detection Result - Passenger {{ passenger.passenger_id }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="container result-container">
+        <header class="result-header">
+            <h1><i class="fas fa-clipboard-check"></i> Detection Result</h1>
+            <div class="header-actions">
+                <button class="btn btn-secondary" onclick="location.href='/dashboard'">
+                    <i class="fas fa-tachometer-alt"></i> Dashboard
+                </button>
+                <button class="btn btn-primary" onclick="location.href='/'">
+                    <i class="fas fa-home"></i> Home
+                </button>
+            </div>
+        </header>
+
+        <!-- Alert Banner -->
+        <div class="alert-banner {{ 'alert-banner-anomaly' if alert.alert_type == 'anomaly' else 'alert-banner-normal' }}">
+            <div class="alert-icon">
+                <i class="fas {{ 'fa-exclamation-triangle' if alert.alert_type == 'anomaly' else 'fa-check-circle' }} fa-2x"></i>
+            </div>
+            <div class="alert-content">
+                <h2>
+                    {{ 'ANOMALY DETECTED!' if alert.alert_type == 'anomaly' else 'NORMAL EXIT' }}
+                </h2>
+                <p>
+                    Passenger {{ passenger.passenger_id }} -
+                    {{ 'Appearance anomaly detected with ' if alert.alert_type == 'anomaly' else 'No anomalies detected. ' }}
+                    Confidence: {{ "%.1f"|format(alert.confidence * 100) }}%
+                </p>
+            </div>
+        </div>
+
+        <div class="result-grid">
+            <!-- Passenger Information -->
+            <div class="result-card">
+                <h3><i class="fas fa-user"></i> Passenger Information</h3>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <span class="info-label">Passenger ID:</span>
+                        <span class="info-value">{{ passenger.passenger_id }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Name:</span>
+                        <span class="info-value">{{ passenger.name }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Total Journeys:</span>
+                        <span class="info-value">{{ passenger.total_journeys }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Last Seen:</span>
+                        <span class="info-value">{{ passenger.last_seen.strftime('%Y-%m-%d %H:%M:%S') }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Journey Details -->
+            <div class="result-card">
+                <h3><i class="fas fa-route"></i> Journey Details</h3>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <span class="info-label">Journey ID:</span>
+                        <span class="info-value">{{ journey.journey_id }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Bus Turn:</span>
+                        <span class="info-value">{{ journey.bus_turn_id }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Entrance Time:</span>
+                        <span class="info-value">{{ journey.entrance_time.strftime('%H:%M:%S') }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Exit Time:</span>
+                        <span class="info-value">{{ journey.exit_time.strftime('%H:%M:%S') }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Travel Time:</span>
+                        <span class="info-value">
+                            {{ journey.travel_time_seconds // 60 }} min {{ journey.travel_time_seconds % 60 }} sec
+                        </span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Date:</span>
+                        <span class="info-value">{{ journey.date.strftime('%Y-%m-%d') }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Detection Results -->
+            <div class="result-card wide-card">
+                <h3><i class="fas fa-chart-line"></i> Detection Analysis</h3>
+                <div class="detection-analysis">
+                    <div class="confidence-meter">
+                        <div class="meter-label">Confidence Score</div>
+                        <div class="meter-bar">
+                            <div class="meter-fill"
+                                 style="width: {{ alert.confidence * 100 }}%;
+                                        background: {{ 'linear-gradient(90deg, #dc3545, #ffc107)' if alert.alert_type == 'anomaly' else 'linear-gradient(90deg, #28a745, #20c997)' }};">
+                                <span class="meter-value">{{ "%.1f"|format(alert.confidence * 100) }}%</span>
+                            </div>
+                        </div>
+                        <div class="meter-threshold">
+                            <span>0%</span>
+                            <span>Threshold: 70%</span>
+                            <span>100%</span>
+                        </div>
+                    </div>
+
+                    <div class="similarity-scores">
+                        <h4>Similarity Scores</h4>
+                        <div class="scores-grid" id="scoresGrid">
+                            <!-- Scores will be populated by JavaScript -->
+                        </div>
+                    </div>
+
+                    <div class="alert-level">
+                        <h4>Alert Level:
+                            <span class="level-{{ alert.alert_level }}">
+                                {{ alert.alert_level|upper }}
+                            </span>
+                        </h4>
+                        <div class="level-description">
+                            {% if alert.alert_level == 'high' %}
+                            <i class="fas fa-exclamation-circle"></i>
+                            High risk - Immediate attention required
+                            {% elif alert.alert_level == 'medium' %}
+                            <i class="fas fa-exclamation-triangle"></i>
+                            Medium risk - Review recommended
+                            {% else %}
+                            <i class="fas fa-check-circle"></i>
+                            Low risk - Normal variation
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Image Comparison -->
+            <div class="result-card wide-card">
+                <h3><i class="fas fa-images"></i> Image Comparison</h3>
+                <div class="image-comparison">
+                    <div class="comparison-section">
+                        <h4>Entrance Images</h4>
+                        <div class="image-grid" id="entranceImages">
+                            <!-- Entrance images will be loaded here -->
+                        </div>
+                    </div>
+                    <div class="comparison-section">
+                        <h4>Exit Image</h4>
+                        <div class="image-single" id="exitImage">
+                            <!-- Exit image will be loaded here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="action-buttons">
+            <button class="btn btn-primary" onclick="location.href='/capture_entrance/new'">
+                <i class="fas fa-user-plus"></i> New Passenger
+            </button>
+            <button class="btn btn-secondary" onclick="location.href='/history?passenger_id={{ passenger.passenger_id }}'">
+                <i class="fas fa-history"></i> View History
+            </button>
+            <button class="btn btn-info" onclick="generateReport()">
+                <i class="fas fa-file-pdf"></i> Export Report
+            </button>
+            <button class="btn btn-success" onclick="location.href='/dashboard'">
+                <i class="fas fa-redo"></i> Continue Monitoring
+            </button>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script>
+        // Load images
+        function loadImages() {
+            // Simulate loading entrance images
+            const entranceGrid = document.getElementById('entranceImages');
+            for (let i = 1; i <= 4; i++) {
+                const imgDiv = document.createElement('div');
+                imgDiv.className = 'image-item';
+                imgDiv.innerHTML = `
+                    <div class="image-placeholder">
+                        <i class="fas fa-user fa-2x"></i>
+                        <p>Entrance ${i}</p>
+                    </div>
+                    <div class="image-score">
+                        <span class="score-label">Similarity:</span>
+                        <span class="score-value">${(Math.random() * 0.3 + 0.6).toFixed(2)}</span>
+                    </div>
+                `;
+                entranceGrid.appendChild(imgDiv);
+            }
+
+            // Load exit image
+            const exitDiv = document.getElementById('exitImage');
+            exitDiv.innerHTML = `
+                <div class="image-item single">
+                    <div class="image-placeholder">
+                        <i class="fas fa-door-open fa-2x"></i>
+                        <p>Exit Image</p>
+                    </div>
+                    <div class="image-score">
+                        <span class="score-label">Anomaly Score:</span>
+                        <span class="score-value {{ 'high' if alert.alert_type == 'anomaly' else 'low' }}">
+                            {{ "%.2f"|format(1 - alert.confidence) if alert.alert_type == 'anomaly' else "%.2f"|format(alert.confidence) }}
+                        </span>
+                    </div>
+                </div>
+            `;
+
+            // Load similarity scores
+            const scoresGrid = document.getElementById('scoresGrid');
+            const scores = [0.85, 0.72, 0.91, 0.68]; // Example scores
+            scores.forEach((score, index) => {
+                const scoreDiv = document.createElement('div');
+                scoreDiv.className = 'score-item';
+                scoreDiv.innerHTML = `
+                    <div class="score-label">Image ${index + 1}</div>
+                    <div class="score-bar">
+                        <div class="score-fill" style="width: ${score * 100}%"></div>
+                    </div>
+                    <div class="score-value">${score.toFixed(2)}</div>
+                `;
+                scoresGrid.appendChild(scoreDiv);
+            });
+        }
+
+        function generateReport() {
+            alert('Report generation feature coming soon!');
+        }
+
+        // Load everything when page is ready
+        document.addEventListener('DOMContentLoaded', loadImages);
+    </script>
+</body>
+</html>

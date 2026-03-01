@@ -1,0 +1,1443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Driving Ability Monitor</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: white;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Navbar & System Status Styles */
+        .navbar-brand { font-weight: bold; font-size: 1.5rem; }
+        .live-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            background-color: #2ecc71;
+            border-radius: 50%;
+            margin-right: 5px;
+            animation: pulse-green 2s infinite;
+        }
+        @keyframes pulse-green {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        .system-status {
+            font-size: 0.9rem;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            background: rgba(46, 204, 113, 0.1);
+            border: 1px solid rgba(46, 204, 113, 0.3);
+            color: #ecf0f1;
+        }
+
+        /* Feature Cards */
+        .feature-nav-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .feature-nav-card {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        .feature-nav-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+            color: white;
+            background: rgba(255, 255, 255, 0.05);
+        }
+        .feature-nav-card.active {
+            border-color: #4cc9f0;
+            background: rgba(76, 201, 240, 0.1);
+        }
+        .feature-nav-card i {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+        .feature-nav-card.ability i { color: #f39c12; }
+        .feature-nav-card.alcohol i { color: #e74c3c; }
+        .feature-nav-card.behavior i { color: #3498db; }
+
+        .app-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            flex: 1;
+            width: 100%;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 25px;
+            background: linear-gradient(135deg, #0f3460 0%, #1a1a2e 100%);
+            border-radius: 15px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, #4cc9f0 0%, #4361ee 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.8;
+            max-width: 800px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        @media (max-width: 1200px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .camera-section {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .camera-container {
+            position: relative;
+            width: 100%;
+            height: 500px;
+            background: #000;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+
+        #videoFeed {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .camera-overlay {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            right: 20px;
+            display: flex;
+            justify-content: space-between;
+            z-index: 10;
+        }
+
+        .camera-status {
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+        }
+
+        .camera-status.active {
+            background: rgba(76, 175, 80, 0.7);
+        }
+
+        .camera-status.inactive {
+            background: rgba(244, 67, 54, 0.7);
+        }
+
+        .controls-section {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .btn-custom {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            flex: 1;
+        }
+
+        .btn-primary-custom {
+            background: linear-gradient(135deg, #4361ee 0%, #3a0ca3 100%);
+            color: white;
+        }
+
+        .btn-primary-custom:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 20px rgba(67, 97, 238, 0.3);
+            color: white;
+        }
+
+        .btn-danger-custom {
+            background: linear-gradient(135deg, #f72585 0%, #b5179e 100%);
+            color: white;
+        }
+
+        .btn-danger-custom:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 20px rgba(247, 37, 133, 0.3);
+            color: white;
+        }
+
+        .btn-secondary-custom {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .btn-secondary-custom:hover {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+        }
+
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+
+        .stats-card {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .stats-card h3 {
+            font-size: 1.3rem;
+            margin-bottom: 20px;
+            color: #4cc9f0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .stat-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateY(-5px);
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 5px;
+            color: #4cc9f0;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+
+        .alerts-card {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            border: 1px solid rgba(255,255,255,0.1);
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .alerts-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .alerts-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .alert-item {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-left: 4px solid;
+            animation: slideIn 0.3s ease;
+        }
+
+        .alert-item.high {
+            border-left-color: #f72585;
+            background: rgba(247, 37, 133, 0.1);
+        }
+
+        .alert-item.medium {
+            border-left-color: #f8961e;
+            background: rgba(248, 150, 30, 0.1);
+        }
+
+        .alert-item.low {
+            border-left-color: #4cc9f0;
+            background: rgba(76, 201, 240, 0.1);
+        }
+
+        .alert-time {
+            font-size: 0.8rem;
+            opacity: 0.7;
+            margin-bottom: 5px;
+        }
+
+        .alert-message {
+            font-weight: 500;
+            margin-bottom: 5px;
+        }
+
+        .alert-severity {
+            font-size: 0.8rem;
+            padding: 3px 8px;
+            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            display: inline-block;
+        }
+
+        .lane-info {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .lane-status {
+            text-align: center;
+        }
+
+        .lane-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #4cc9f0;
+        }
+
+        .lane-label {
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+
+        .instructions {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            border: 1px solid rgba(255,255,255,0.1);
+            margin-top: 30px;
+        }
+
+        .instructions h3 {
+            font-size: 1.3rem;
+            margin-bottom: 15px;
+            color: #4cc9f0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .instructions ul {
+            list-style: none;
+            padding-left: 20px;
+        }
+
+        .instructions li {
+            margin-bottom: 10px;
+            padding-left: 10px;
+            position: relative;
+        }
+
+        .instructions li:before {
+            content: "•";
+            color: #4cc9f0;
+            position: absolute;
+            left: -10px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            opacity: 0.7;
+        }
+
+        .empty-state i {
+            font-size: 3rem;
+            margin-bottom: 15px;
+            opacity: 0.5;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(76, 201, 240, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(76, 201, 240, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(76, 201, 240, 0); }
+        }
+
+        .recording-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            background: #f72585;
+            border-radius: 50%;
+            margin-right: 8px;
+            animation: pulse 2s infinite;
+        }
+
+        .violation-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            background: #4cc9f0;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .alert-sound {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 10px;
+            display: none;
+            align-items: center;
+            gap: 10px;
+            animation: slideIn 0.3s ease;
+            z-index: 1000;
+        }
+
+        .alert-sound.show {
+            display: flex;
+        }
+
+        /* Footer Styles */
+        footer {
+            margin-top: auto;
+            padding: 2rem 0;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+
+        @media (max-width: 768px) {
+            .header h1 { font-size: 2rem; }
+            .stats-grid { grid-template-columns: 1fr; }
+            .controls-section { flex-direction: column; }
+            .camera-container { height: 300px; }
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar navbar-expand-lg navbar-dark" style="background-color: rgba(0,0,0,0.8); border-bottom: 1px solid rgba(255,255,255,0.1);">
+        <div class="container-fluid px-4">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-bus me-2"></i>Travel Agent Supporting Tool
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/history">History</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/about">About</a>
+                    </li>
+                </ul>
+                <div class="system-status ms-3">
+                    <span class="live-indicator"></span> System Ready
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="app-container">
+
+        <div class="feature-nav-grid">
+            <a href="/driving_ab" class="feature-nav-card ability active">
+                <i class="fas fa-user-clock"></i>
+                <h5>Driving Ability Monitor</h5>
+            </a>
+            <a href="/drunkard_level" class="feature-nav-card alcohol">
+                <i class="fas fa-wine-bottle"></i>
+                <h5>Alcohol Level Detection</h5>
+            </a>
+            <a href="/driver_behavior" class="feature-nav-card behavior">
+                <i class="fas fa-video fa-4x mb-4"></i>
+                <h5>Driver Behavior Analyze</h5>
+            </a>
+        </div>
+
+        <div class="header">
+            <h1><i class="fas fa-user-clock"></i> Driving Ability Monitor</h1>
+            <p>Real-time lane violation detection and driving behavior analysis using computer vision and AI</p>
+        </div>
+
+        <div class="main-content">
+            <div class="camera-section">
+                <div class="camera-container">
+                    <img id="videoFeed" src="{{ url_for('video_feed') }}" alt="Camera Feed">
+                    <div class="camera-overlay">
+                        <div class="camera-status" id="cameraStatus">
+                            <span id="statusIndicator" class="recording-indicator"></span>
+                            <span id="statusText">Camera Loading...</span>
+                        </div>
+                        <div class="camera-status">
+                            <span class="violation-indicator"></span>
+                            Violations: <span id="violationCount">0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="controls-section">
+                    <button class="btn-custom btn-primary-custom" onclick="startMonitoring()">
+                        <i class="fas fa-play-circle"></i> Start Monitoring
+                    </button>
+                    <button class="btn-custom btn-danger-custom" onclick="stopMonitoring()">
+                        <i class="fas fa-stop-circle"></i> Stop Monitoring
+                    </button>
+                    <button class="btn-custom btn-secondary-custom" onclick="downloadReport()">
+                        <i class="fas fa-download"></i> Download Report
+                    </button>
+                </div>
+
+                <div class="lane-info">
+                    <div class="lane-status">
+                        <div class="lane-value" id="laneDetection">85%</div>
+                        <div class="lane-label">Lane Detection</div>
+                    </div>
+                    <div class="lane-status">
+                        <div class="lane-value" id="vehiclePosition">Center</div>
+                        <div class="lane-label">Vehicle Position</div>
+                    </div>
+                    <div class="lane-status">
+                        <div class="lane-value" id="sessionTime">00:00</div>
+                        <div class="lane-label">Session Time</div>
+                    </div>
+                    <div class="lane-status">
+                        <div class="lane-value" id="violationRate">0/min</div>
+                        <div class="lane-label">Violation Rate</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="sidebar">
+                <div class="stats-card">
+                    <h3><i class="fas fa-chart-bar"></i> Driving Statistics</h3>
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <div class="stat-value" id="totalViolations">0</div>
+                            <div class="stat-label">Total Violations</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="highSeverity">0</div>
+                            <div class="stat-label">High Severity</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="avgResponse">0.0s</div>
+                            <div class="stat-label">Avg Response</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="drivingScore">100</div>
+                            <div class="stat-label">Driving Score</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="alerts-card">
+                    <div class="alerts-header">
+                        <h3><i class="fas fa-bell"></i> Recent Alerts</h3>
+                        <button class="btn-custom btn-secondary-custom" onclick="clearAlerts()" style="padding: 8px 15px; font-size: 0.9rem;">
+                            <i class="fas fa-trash"></i> Clear
+                        </button>
+                    </div>
+                    <div class="alerts-list" id="alertsList">
+                        <div class="empty-state">
+                            <i class="fas fa-bell-slash"></i>
+                            <p>No alerts yet. Start monitoring to detect violations.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="instructions">
+            <h3><i class="fas fa-info-circle"></i> How It Works</h3>
+            <ul>
+                <li>System detects lane boundaries using computer vision algorithms</li>
+                <li>Monitors vehicle position relative to lane boundaries in real-time</li>
+                <li>Generates alerts for lane violations and dangerous driving behavior</li>
+                <li>Saves violation data with timestamps and screenshots</li>
+                <li>Provides driving score based on lane discipline</li>
+                <li>Generates detailed reports for driver assessment</li>
+            </ul>
+        </div>
+
+        <div class="alert-sound" id="alertSound">
+            <i class="fas fa-exclamation-triangle fa-2x" style="color: #f72585;"></i>
+            <div>
+                <h4 style="margin: 0;">Lane Violation Detected!</h4>
+                <p style="margin: 5px 0 0 0; opacity: 0.8;">Check the alerts panel for details</p>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <div class="container text-center">
+            <p class="mb-2">© 2024 Travel Agent Supporting Tool. All rights reserved.</p>
+            <p class="text-muted" style="color: #adb5bd !important;">Powered by AI & Machine Learning Technologies</p>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        let monitoring = false;
+        let startTime = null;
+        let violationCount = 0;
+        let highSeverityCount = 0;
+        let sessionTimer = null;
+        let alertCheckInterval = null;
+        let alerts = [];
+
+        // DOM Elements
+        const videoFeed = document.getElementById('videoFeed');
+        const cameraStatus = document.getElementById('cameraStatus');
+        const statusText = document.getElementById('statusText');
+        const statusIndicator = document.getElementById('statusIndicator');
+        const violationCountElement = document.getElementById('violationCount');
+        const alertsList = document.getElementById('alertsList');
+        const alertSound = document.getElementById('alertSound');
+
+        // Statistics elements
+        const totalViolationsElement = document.getElementById('totalViolations');
+        const highSeverityElement = document.getElementById('highSeverity');
+        const avgResponseElement = document.getElementById('avgResponse');
+        const drivingScoreElement = document.getElementById('drivingScore');
+        const laneDetectionElement = document.getElementById('laneDetection');
+        const vehiclePositionElement = document.getElementById('vehiclePosition');
+        const sessionTimeElement = document.getElementById('sessionTime');
+        const violationRateElement = document.getElementById('violationRate');
+
+        function startMonitoring() {
+            if (monitoring) {
+                showAlert('Monitoring already in progress', 'warning');
+                return;
+            }
+
+            fetch('/start_monitoring')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'started') {
+                        monitoring = true;
+                        startTime = new Date();
+                        violationCount = 0;
+                        highSeverityCount = 0;
+
+                        // Update UI
+                        cameraStatus.className = 'camera-status active';
+                        statusText.textContent = 'Monitoring Active';
+                        statusIndicator.className = 'recording-indicator';
+
+                        // Start timers
+                        startSessionTimer();
+                        startAlertCheck();
+
+                        showAlert('Monitoring started successfully', 'success');
+                    } else {
+                        showAlert(data.message, 'warning');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error starting monitoring:', error);
+                    showAlert('Failed to start monitoring', 'error');
+                });
+        }
+
+        function stopMonitoring() {
+            if (!monitoring) {
+                showAlert('No active monitoring session', 'warning');
+                return;
+            }
+
+            fetch('/stop_monitoring')
+                .then(response => response.json())
+                .then(data => {
+                    monitoring = false;
+
+                    // Update UI
+                    cameraStatus.className = 'camera-status inactive';
+                    statusText.textContent = 'Monitoring Stopped';
+                    statusIndicator.className = 'violation-indicator';
+
+                    // Stop timers
+                    stopSessionTimer();
+                    stopAlertCheck();
+
+                    // Generate report
+                    generateReport();
+
+                    showAlert('Monitoring stopped. Report generated.', 'success');
+                })
+                .catch(error => {
+                    console.error('Error stopping monitoring:', error);
+                    showAlert('Failed to stop monitoring', 'error');
+                });
+        }
+
+        function startSessionTimer() {
+            if (sessionTimer) clearInterval(sessionTimer);
+
+            sessionTimer = setInterval(() => {
+                if (startTime) {
+                    const now = new Date();
+                    const diff = Math.floor((now - startTime) / 1000);
+                    const minutes = Math.floor(diff / 60);
+                    const seconds = diff % 60;
+
+                    sessionTimeElement.textContent =
+                        `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+
+                    // Calculate violation rate
+                    if (minutes > 0) {
+                        const rate = (violationCount / minutes).toFixed(1);
+                        violationRateElement.textContent = `${rate}/min`;
+                    }
+                }
+            }, 1000);
+        }
+
+        function stopSessionTimer() {
+            if (sessionTimer) {
+                clearInterval(sessionTimer);
+                sessionTimer = null;
+            }
+        }
+
+        function startAlertCheck() {
+            if (alertCheckInterval) clearInterval(alertCheckInterval);
+
+            alertCheckInterval = setInterval(() => {
+                fetch('/get_alerts')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.alerts && data.alerts.length > 0) {
+                            processNewAlerts(data.alerts);
+                        }
+                    })
+                    .catch(error => console.error('Error fetching alerts:', error));
+
+                // Update statistics
+                fetch('/get_summary')
+                    .then(response => response.json())
+                    .then(data => {
+                        updateStatistics(data);
+                    })
+                    .catch(error => console.error('Error fetching summary:', error));
+            }, 1000);
+        }
+
+        function stopAlertCheck() {
+            if (alertCheckInterval) {
+                clearInterval(alertCheckInterval);
+                alertCheckInterval = null;
+            }
+        }
+
+        function processNewAlerts(newAlerts) {
+            newAlerts.forEach(alert => {
+                // Add to alerts array
+                alerts.unshift(alert);
+
+                // Update violation counts
+                violationCount++;
+                if (alert.severity === 'HIGH') {
+                    highSeverityCount++;
+                }
+
+                // Update UI
+                updateViolationDisplay();
+                addAlertToUI(alert);
+                playAlertSound();
+            });
+
+            // Keep only last 50 alerts
+            if (alerts.length > 50) {
+                alerts = alerts.slice(0, 50);
+            }
+        }
+
+        function updateViolationDisplay() {
+            violationCountElement.textContent = violationCount;
+            totalViolationsElement.textContent = violationCount;
+            highSeverityElement.textContent = highSeverityCount;
+
+            // Update driving score
+            const score = Math.max(0, 100 - (violationCount * 5));
+            drivingScoreElement.textContent = score;
+
+            // Update average response time (simulated)
+            if (violationCount > 0) {
+                const avgResponse = (1.5 / violationCount).toFixed(1);
+                avgResponseElement.textContent = `${avgResponse}s`;
+            }
+        }
+
+        function addAlertToUI(alert) {
+            // Remove empty state if present
+            const emptyState = alertsList.querySelector('.empty-state');
+            if (emptyState) {
+                emptyState.remove();
+            }
+
+            const alertElement = document.createElement('div');
+            alertElement.className = `alert-item ${alert.severity.toLowerCase()}`;
+            alertElement.innerHTML = `
+                <div class="alert-time">${formatTime(alert.timestamp)}</div>
+                <div class="alert-message">${alert.type.replace('_', ' ')}</div>
+                <span class="alert-severity">${alert.severity}</span>
+            `;
+
+            // Add to top of list
+            alertsList.insertBefore(alertElement, alertsList.firstChild);
+
+            // Keep only last 10 alerts visible
+            const allAlerts = alertsList.querySelectorAll('.alert-item');
+            if (allAlerts.length > 10) {
+                for (let i = 10; i < allAlerts.length; i++) {
+                    allAlerts[i].remove();
+                }
+            }
+        }
+
+        function playAlertSound() {
+            // Show visual alert
+            alertSound.classList.add('show');
+
+            // Play sound
+            try {
+                const audio = new Audio('data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEAQB8AAEAfAAABAAgAZGF0YQ');
+                audio.play().catch(e => console.log('Audio play failed:', e));
+            } catch (e) {
+                console.log('Audio not supported');
+            }
+
+            // Hide after 5 seconds
+            setTimeout(() => {
+                alertSound.classList.remove('show');
+            }, 5000);
+        }
+
+        function updateStatistics(data) {
+            if (data.violations > violationCount) {
+                violationCount = data.violations;
+                updateViolationDisplay();
+            }
+
+            // Update lane detection (simulated)
+            const laneDetection = Math.floor(Math.random() * 20) + 80; // 80-100%
+            laneDetectionElement.textContent = `${laneDetection}%`;
+
+            // Update vehicle position (simulated)
+            const positions = ['Left', 'Center', 'Right'];
+            const randomPosition = positions[Math.floor(Math.random() * positions.length)];
+            vehiclePositionElement.textContent = randomPosition;
+        }
+
+        function clearAlerts() {
+            alerts = [];
+            violationCount = 0;
+            highSeverityCount = 0;
+
+            // Update UI
+            alertsList.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-bell-slash"></i>
+                    <p>No alerts yet. Start monitoring to detect violations.</p>
+                </div>
+            `;
+            updateViolationDisplay();
+
+            showAlert('All alerts cleared', 'success');
+        }
+
+        function downloadReport() {
+            if (alerts.length === 0) {
+                showAlert('No data available for report', 'warning');
+                return;
+            }
+
+            const report = {
+                sessionStart: startTime ? startTime.toISOString() : 'N/A',
+                sessionEnd: new Date().toISOString(),
+                totalViolations: violationCount,
+                highSeverityViolations: highSeverityCount,
+                drivingScore: drivingScoreElement.textContent,
+                alerts: alerts
+            };
+
+            const blob = new Blob([JSON.stringify(report, null, 2)], {type: 'application/json'});
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `driving-report-${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+
+            showAlert('Report downloaded successfully', 'success');
+        }
+
+        function generateReport() {
+            // In a real implementation, this would generate a more detailed report
+            console.log('Session Report:', {
+                duration: sessionTimeElement.textContent,
+                violations: violationCount,
+                highSeverity: highSeverityCount,
+                drivingScore: drivingScoreElement.textContent
+            });
+        }
+
+        function formatTime(timestamp) {
+            const date = new Date(timestamp);
+            return date.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit', second: '2-digit'});
+        }
+
+        function showAlert(message, type = 'info') {
+            // Simple alert system
+            const alertDiv = document.createElement('div');
+            alertDiv.className = 'alert-item';
+            alertDiv.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                z-index: 1000;
+                animation: slideIn 0.3s ease;
+                background: ${type === 'error' || type === 'warning' ? 'rgba(247, 37, 133, 0.9)' : 'rgba(76, 201, 240, 0.9)'};
+                color: white;
+                border: none;
+            `;
+            alertDiv.innerHTML = `
+                <div class="alert-message">${message}</div>
+                <span class="alert-severity" style="background: rgba(0,0,0,0.2);">${type.toUpperCase()}</span>
+            `;
+
+            document.body.appendChild(alertDiv);
+
+            setTimeout(() => {
+                alertDiv.remove();
+            }, 3000);
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            // Check camera status every 2 seconds
+            setInterval(() => {
+                fetch('/get_summary')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.is_running && !monitoring) {
+                            // Session was started elsewhere
+                            monitoring = true;
+                            startTime = new Date(data.session_start);
+                            startSessionTimer();
+                            startAlertCheck();
+
+                            cameraStatus.className = 'camera-status active';
+                            statusText.textContent = 'Monitoring Active';
+                            statusIndicator.className = 'recording-indicator';
+                        }
+                    })
+                    .catch(() => {
+                        // Server not reachable
+                        if (monitoring) {
+                            monitoring = false;
+                            cameraStatus.className = 'camera-status inactive';
+                            statusText.textContent = 'Camera Offline';
+                            statusIndicator.className = 'violation-indicator';
+                            stopSessionTimer();
+                            stopAlertCheck();
+                        }
+                    });
+            }, 2000);
+        });
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.key === ' ') { // Space bar
+                e.preventDefault();
+                if (monitoring) {
+                    stopMonitoring();
+                } else {
+                    startMonitoring();
+                               }
+            } else if (e.key === 'r' && e.ctrlKey) { // Ctrl+R for report
+                e.preventDefault();
+                downloadReport();
+            } else if (e.key === 'c' && e.ctrlKey) { // Ctrl+C for clear
+                e.preventDefault();
+                clearAlerts();
+            } else if (e.key === 's' && e.ctrlKey) { // Ctrl+S for screenshot
+                e.preventDefault();
+                takeScreenshot();
+            }
+        });
+
+        function takeScreenshot() {
+            if (!monitoring) {
+                showAlert('Start monitoring first to take screenshots', 'warning');
+                return;
+            }
+
+            fetch('/take_screenshot')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Create a temporary link to download the screenshot
+                        const a = document.createElement('a');
+                        a.href = data.screenshot_url;
+                        a.download = `violation-screenshot-${new Date().toISOString().replace(/[:.]/g, '-')}.jpg`;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+
+                        showAlert('Screenshot saved successfully', 'success');
+                    } else {
+                        showAlert('Failed to take screenshot', 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error taking screenshot:', error);
+                    showAlert('Failed to take screenshot', 'error');
+                });
+        }
+
+        // Real-time updates using WebSocket (if available)
+        function setupWebSocket() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}/ws`;
+
+            try {
+                const ws = new WebSocket(wsUrl);
+
+                ws.onopen = function() {
+                    console.log('WebSocket connected');
+                };
+
+                ws.onmessage = function(event) {
+                    const data = JSON.parse(event.data);
+
+                    if (data.type === 'violation') {
+                        // Process violation in real-time
+                        processNewAlerts([data.alert]);
+                    } else if (data.type === 'statistics') {
+                        updateStatistics(data.stats);
+                    } else if (data.type === 'lane_detection') {
+                        updateLaneDetection(data.detection);
+                    }
+                };
+
+                ws.onclose = function() {
+                    console.log('WebSocket disconnected');
+                    // Try to reconnect after 5 seconds
+                    setTimeout(setupWebSocket, 5000);
+                };
+
+                ws.onerror = function(error) {
+                    console.error('WebSocket error:', error);
+                };
+
+                // Store WebSocket reference for cleanup
+                window.ws = ws;
+            } catch (error) {
+                console.log('WebSocket not available, using polling');
+            }
+        }
+
+        function updateLaneDetection(detection) {
+            if (detection.confidence !== undefined) {
+                laneDetectionElement.textContent = `${Math.round(detection.confidence * 100)}%`;
+            }
+
+            if (detection.position !== undefined) {
+                vehiclePositionElement.textContent = detection.position;
+            }
+
+            if (detection.lanes_detected !== undefined) {
+                // Update lane visualization
+                updateLaneVisualization(detection.lanes_detected);
+            }
+        }
+
+        function updateLaneVisualization(lanes) {
+            // This would update the video overlay with lane lines
+            // For now, just log it
+            if (lanes > 0) {
+                console.log(`Detected ${lanes} lane(s)`);
+            }
+        }
+
+        // Initialize WebSocket connection
+        setupWebSocket();
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            if (window.ws) {
+                window.ws.close();
+            }
+
+            if (monitoring) {
+                // Send stop command before leaving
+                fetch('/stop_monitoring').catch(() => {});
+            }
+        });
+
+        // Additional utility functions
+        function calculateDrivingScore() {
+            if (violationCount === 0) return 100;
+
+            let score = 100;
+            const violationPenalty = 5; // Points deducted per violation
+            const highSeverityPenalty = 10; // Additional penalty for high severity
+
+            score -= violationCount * violationPenalty;
+            score -= highSeverityCount * highSeverityPenalty;
+
+            // Ensure score doesn't go below 0
+            return Math.max(0, Math.min(100, score));
+        }
+
+        function simulateViolation() {
+            if (!monitoring) return;
+
+            const violationTypes = [
+                'LANE_DEPARTURE_LEFT',
+                'LANE_DEPARTURE_RIGHT',
+                'UNSAFE_LANE_CHANGE',
+                'CENTER_LINE_CROSSING',
+                'ROAD_EDGE_APPROACH'
+            ];
+
+            const severities = ['LOW', 'MEDIUM', 'HIGH'];
+            const randomType = violationTypes[Math.floor(Math.random() * violationTypes.length)];
+            const randomSeverity = severities[Math.floor(Math.random() * severities.length)];
+
+            const simulatedAlert = {
+                type: randomType,
+                severity: randomSeverity,
+                timestamp: new Date().toISOString(),
+                confidence: Math.random() * 0.5 + 0.5, // 0.5 to 1.0
+                position: ['Left', 'Center', 'Right'][Math.floor(Math.random() * 3)]
+            };
+
+            processNewAlerts([simulatedAlert]);
+        }
+
+        // Demo mode for testing
+        let demoMode = false;
+        let demoInterval = null;
+
+        function startDemoMode() {
+            if (demoMode) return;
+
+            demoMode = true;
+            startMonitoring();
+
+            demoInterval = setInterval(() => {
+                if (Math.random() < 0.3) { // 30% chance of violation each second
+                    simulateViolation();
+                }
+            }, 2000); // Check every 2 seconds
+
+            showAlert('Demo mode started', 'info');
+        }
+
+        function stopDemoMode() {
+            if (!demoMode) return;
+
+            demoMode = false;
+            if (demoInterval) {
+                clearInterval(demoInterval);
+                demoInterval = null;
+            }
+
+            stopMonitoring();
+            showAlert('Demo mode stopped', 'info');
+        }
+
+        // Add demo buttons (for development/testing)
+        function addDemoControls() {
+            const demoDiv = document.createElement('div');
+            demoDiv.style.cssText = `
+                position: fixed;
+                bottom: 20px;
+                left: 20px;
+                z-index: 1000;
+                display: flex;
+                gap: 10px;
+            `;
+
+            demoDiv.innerHTML = `
+                <button onclick="startDemoMode()" style="
+                    padding: 10px 15px;
+                    background: #f72585;
+                    color: white;
+                    border: none;
+                    border-radius: 5px;
+                    cursor: pointer;
+                ">
+                    <i class="fas fa-play"></i> Demo
+                </button>
+                <button onclick="stopDemoMode()" style="
+                    padding: 10px 15px;
+                    background: #4cc9f0;
+                    color: white;
+                    border: none;
+                    border-radius: 5px;
+                    cursor: pointer;
+                ">
+                    <i class="fas fa-stop"></i> Stop Demo
+                </button>
+                <button onclick="simulateViolation()" style="
+                    padding: 10px 15px;
+                    background: #4361ee;
+                    color: white;
+                    border: none;
+                    border-radius: 5px;
+                    cursor: pointer;
+                ">
+                    <i class="fas fa-bolt"></i> Test Violation
+                </button>
+            `;
+
+            // Only add in development
+            if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                document.body.appendChild(demoDiv);
+            }
+        }
+
+        // Initialize demo controls
+        addDemoControls();
+
+        // Export data functionality
+        function exportData(format = 'json') {
+            if (alerts.length === 0) {
+                showAlert('No data to export', 'warning');
+                return;
+            }
+
+            const data = {
+                session: {
+                    start: startTime ? startTime.toISOString() : 'N/A',
+                    end: new Date().toISOString(),
+                    duration: sessionTimeElement.textContent,
+                    monitoring_active: monitoring
+                },
+                statistics: {
+                    total_violations: violationCount,
+                    high_severity_violations: highSeverityCount,
+                    driving_score: drivingScoreElement.textContent,
+                    violation_rate: violationRateElement.textContent
+                },
+                alerts: alerts,
+                timestamp: new Date().toISOString()
+            };
+
+            let blob, filename, mimeType;
+
+            switch (format) {
+                case 'json':
+                    blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                    filename = `driving-data-${new Date().toISOString().split('T')[0]}.json`;
+                    mimeType = 'application/json';
+                    break;
+
+                case 'csv':
+                    const csvContent = convertToCSV(data);
+                    blob = new Blob([csvContent], { type: 'text/csv' });
+                    filename = `driving-data-${new Date().toISOString().split('T')[0]}.csv`;
+                    mimeType = 'text/csv';
+                    break;
+
+                default:
+                    showAlert('Unsupported format', 'error');
+                    return;
+            }
+
+            downloadBlob(blob, filename, mimeType);
+            showAlert(`Data exported as ${format.toUpperCase()}`, 'success');
+        }
+
+        function convertToCSV(data) {
+            const headers = ['Timestamp', 'Type', 'Severity', 'Confidence'];
+            const rows = data.alerts.map(alert => [
+                alert.timestamp,
+                alert.type,
+                alert.severity,
+                alert.confidence || 'N/A'
+            ]);
+
+            return [
+                headers.join(','),
+                ...rows.map(row => row.join(','))
+            ].join('\n');
+        }
+
+        function downloadBlob(blob, filename, mimeType) {
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.type = mimeType;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+        }
+
+        // Add export buttons
+        function addExportControls() {
+            const exportDiv = document.createElement('div');
+            exportDiv.style.cssText = `
+                position: fixed;
+                bottom: 20px;
+                right: 20px;
+                z-index: 1000;
+                display: flex;
+                gap: 10px;
+            `;
+
+            exportDiv.innerHTML = `
+                <button onclick="exportData('json')" style="
+                    padding: 8px 12px;
+                    background: #7209b7;
+                    color: white;
+                    border: none;
+                    border-radius: 5px;
+                    cursor: pointer;
+                    font-size: 0.9rem;
+                ">
+                    <i class="fas fa-file-code"></i> JSON
+                </button>
+                <button onclick="exportData('csv')" style="
+                    padding: 8px 12px;
+                    background: #f8961e;
+                    color: white;
+                    border: none;
+                    border-radius: 5px;
+                    cursor: pointer;
+                    font-size: 0.9rem;
+                ">
+                    <i class="fas fa-file-csv"></i> CSV
+                </button>
+            `;
+
+            document.body.appendChild(exportDiv);
+        }
+
+        // Initialize export controls
+        addExportControls();
+
+        // Responsive adjustments
+        function handleResize() {
+            const cameraContainer = document.querySelector('.camera-container');
+            const videoFeed = document.getElementById('videoFeed');
+
+            if (window.innerWidth < 768) {
+                cameraContainer.style.height = '300px';
+                videoFeed.style.objectFit = 'cover';
+            } else {
+                cameraContainer.style.height = '500px';
+                videoFeed.style.objectFit = 'contain';
+            }
+        }
+
+        window.addEventListener('resize', handleResize);
+        handleResize(); // Initial call
+
+    </script>
+</body>
+</html>

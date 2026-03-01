@@ -1,0 +1,51 @@
+{
+    "daily_profit": -225458.11576275382,
+    "risk_assessment": {
+        "risk_level": "Moderate Risk",
+        "confidence_score": 70.0,
+        "uncertainty_percentage": 30.0
+    },
+    "confidence_interval": null,
+    "temporal_predictions": {
+        "daily": {
+            "base_income": -225458.11576275382,
+            "projected_income": -225458.11576275382,
+            "adjusted_income": -225458.11576275382,
+            "intelligent_prediction": -225458.11576275385,
+            "growth_rate_applied": 0,
+            "risk_adjustment_factor": 1.0
+        },
+        "weekly": {
+            "base_income": -1578206.8103392767,
+            "projected_income": -1579684.2323641102,
+            "adjusted_income": -1579684.2323641102,
+            "intelligent_prediction": -1579093.263554177,
+            "growth_rate_applied": 0.05,
+            "risk_adjustment_factor": 1.0
+        },
+        "monthly": {
+            "base_income": -6763743.4728826145,
+            "projected_income": -6790921.559702185,
+            "adjusted_income": -6790921.559702185,
+            "intelligent_prediction": -6780050.324974358,
+            "growth_rate_applied": 0.05,
+            "risk_adjustment_factor": 1.0
+        },
+        "quarterly": {
+            "base_income": -20291230.418647844,
+            "projected_income": -20536817.379830685,
+            "adjusted_income": -20536817.379830685,
+            "intelligent_prediction": -20438582.59535755,
+            "growth_rate_applied": 0.05,
+            "risk_adjustment_factor": 1.0
+        },
+        "annually": {
+            "base_income": -82292212.25340514,
+            "projected_income": -86406822.8660754,
+            "adjusted_income": -86406822.8660754,
+            "intelligent_prediction": -84760978.6210073,
+            "growth_rate_applied": 0.05,
+            "risk_adjustment_factor": 1.0
+        }
+    }
+}

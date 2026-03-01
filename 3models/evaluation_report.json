@@ -1,0 +1,45 @@
+{
+    "model_info": {
+        "model_type": "LightGBM",
+        "training_date": "2026-01-05 01:26:39",
+        "feature_count": 30,
+        "train_samples": 32000,
+        "test_samples": 8000
+    },
+    "performance_metrics": {
+        "r2_score": 0.9991571096287124,
+        "rmse": 2531.3436990947243,
+        "mae": 1494.4604173684409,
+        "mape": 0.0065410692571190145,
+        "explained_variance": 0.9991571419565136,
+        "max_error": 61392.643798303034,
+        "within_10pct": 0.999875,
+        "within_20pct": 1.0
+    },
+    "model_quality_assessment": {
+        "r2_interpretation": "Excellent",
+        "recommendation": "Production ready"
+    },
+    "top_features": [
+        "route_1_distance",
+        "route_2_distance",
+        "route_3_distance",
+        "daily_collection",
+        "trips_count",
+        "fuel_cost_per_l",
+        "maintenance_cost",
+        "driver_salary",
+        "backup_fuel_cost",
+        "month",
+        "lkr_to_inr_rate",
+        "route_variance",
+        "fuel_efficiency",
+        "bus_age_years",
+        "year",
+        "day",
+        "max_route_distance",
+        "min_route_distance",
+        "route_efficiency",
+        "salary_to_collection_ratio"
+    ]
+}

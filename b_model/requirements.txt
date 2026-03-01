@@ -1,0 +1,11 @@
+# Model Training Environment Requirements
+# Generated automatically
+
+python>=3.12.12
+tensorflow>=2.19.0
+keras>=3.10.0
+numpy>=2.0.2
+pandas>=2.2.2
+PIL>=11.3.0
+matplotlib>=3.10.0
+seaborn>=0.13.2

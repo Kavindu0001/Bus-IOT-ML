@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Live Dashboard - Anomaly Detection</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+
+    <style>
+        .badge { padding: 2px 8px; border-radius: 12px; font-size: 12px; }
+        .badge.on { background: #d1fae5; color: #065f46; }
+        .badge.off { background: #fee2e2; color: #991b1b; }
+        .updates-log { max-height: 240px; overflow-y: auto; border: 1px solid #eee; border-radius: 6px; padding: 8px; }
+        .update-item { display: flex; gap: 8px; padding: 6px 8px; border-bottom: 1px dashed #eee; }
+        .update-item:last-child { border-bottom: none; }
+        .update-anomaly { background: #fff7ed; }
+        .update-normal { background: #f0fdf4; }
+        .update-time { color: #6b7280; min-width: 74px; display: inline-block; }
+        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.4); align-items: center; justify-content: center; z-index: 1050; }
+        .modal-content { background: #fff; padding: 16px; border-radius: 8px; width: 90%; max-width: 420px; }
+        .form-group { margin: 12px 0; }
+        .form-group input { width: 100%; padding: 8px; border: 1px solid #e5e7eb; border-radius: 6px; }
+        .modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
+        .btn-small { padding: 6px 10px; font-size: 12px; }
+        .no-turn p { margin: 8px 0; }
+        .btn[disabled] { opacity: .6; cursor: not-allowed; }
+
+        /* Navbar & System Status Styles */
+        .live-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            background-color: #2ecc71;
+            border-radius: 50%;
+            margin-right: 5px;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        .system-status {
+            font-size: 0.9rem;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            background: rgba(46, 204, 113, 0.1);
+            border: 1px solid rgba(46, 204, 113, 0.3);
+            color: #ecf0f1;
+        }
+
+        /* Footer Styles */
+        footer {
+            margin-top: 3rem;
+            padding: 2rem 0;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            border-radius: 20px 20px 0 0;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark" style="background-color: rgba(0,0,0,0.8);">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-bus me-2"></i>Travel Agent Supporting Tool
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/history">History</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/about">About</a>
+                    </li>
+                </ul>
+                <div class="system-status ms-3">
+                    <span class="live-indicator"></span> System Ready
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container dashboard-container mt-4">
+        <header class="dashboard-header d-flex justify-content-between align-items-center mb-4">
+            <h1 class="m-0"><i class="fas fa-tachometer-alt"></i> Live Dashboard</h1>
+        </header>
+
+        <div class="dashboard-grid">
+            <div class="dashboard-card">
+                <h3><i class="fas fa-bus"></i> Current Bus Turn</h3>
+                <div class="bus-turn-info">
+                    {% if current_bus_turn %}
+                    <div class="info-row">
+                        <span class="info-label">Turn ID:</span>
+                        <span class="info-value" id="turnId">{{ current_bus_turn.bus_turn_id }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Started:</span>
+                        <span class="info-value" id="turnStart">{{ current_bus_turn.start_time.strftime('%H:%M:%S') }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Duration:</span>
+                        <span class="info-value" id="duration">Calculating...</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Status:</span>
+                        <span class="status-badge active">Active</span>
+                    </div>
+
+                    <div class="mt-4 text-center">
+                        <button class="btn btn-danger w-100" onclick="endJourney()" id="endJourneyBtn">
+                            <i class="fas fa-stop-circle"></i> End Journey
+                        </button>
+                    </div>
+
+                    {% else %}
+                    <div class="no-turn text-center py-3">
+                        <i class="fas fa-exclamation-circle fa-2x mb-2 text-warning"></i>
+                        <p>No active bus turn</p>
+                        <button class="btn btn-success w-100 mt-2" onclick="startJourney()" id="startJourneyBtn">
+                            <i class="fas fa-play"></i> Start Journey
+                        </button>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="dashboard-card">
+                <h3><i class="fas fa-chart-bar"></i> Statistics</h3>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-value" id="statActivePassengers">{{ active_passengers }}</div>
+                        <div class="stat-label">Active Passengers</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="statTodaysPassengers">{{ current_bus_turn.passenger_count if current_bus_turn else 0 }}</div>
+                        <div class="stat-label">Today's Passengers</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="statTodayJourneys">{{ today_journeys }}</div>
+                        <div class="stat-label">Today's Journeys</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="statAnomalies">{{ current_bus_turn.anomaly_count if current_bus_turn else 0 }}</div>
+                        <div class="stat-label">Anomalies</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="dashboard-card wide-card">
+                <h3><i class="fas fa-bell"></i> Recent Alerts</h3>
+                <div class="alerts-container">
+                    <div class="alerts-list" id="alertsList">
+                        {% for alert in recent_alerts %}
+                        <div class="alert-item {{ 'alert-anomaly' if alert.alert_type == 'anomaly' else 'alert-normal' }}">
+                            <div class="alert-icon">
+                                <i class="fas {{ 'fa-exclamation-triangle' if alert.alert_type == 'anomaly' else 'fa-check-circle' }}"></i>
+                            </div>
+                            <div class="alert-content">
+                                <div class="alert-header">
+                                    <span class="alert-passenger">Passenger {{ alert.passenger_id }}</span>
+                                    <span class="alert-time">{{ alert.timestamp.strftime('%H:%M:%S') }}</span>
+                                </div>
+                                <div class="alert-details">
+                                    {{ 'ANOMALY DETECTED' if alert.alert_type == 'anomaly' else 'Normal Exit' }}
+                                    <span class="alert-confidence">({{ "%.1f"|format(alert.confidence * 100) }}%)</span>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="dashboard-card">
+                <h3><i class="fas fa-server"></i> System Status</h3>
+                <div class="status-list">
+                    <div class="status-item">
+                        <span class="status-label">ML Models:</span>
+                        <span class="status-indicator active"></span>
+                        <span class="status-text">Loaded</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Database:</span>
+                        <span class="status-indicator active"></span>
+                        <span class="status-text">Connected</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Processing:</span>
+                        <span class="status-indicator active"></span>
+                        <span class="status-text">Real-time</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="dashboard-card">
+                <h3><i class="fas fa-bolt"></i> Quick Actions</h3>
+                <div class="quick-actions-list">
+                    <button class="action-btn w-100 text-start" onclick="quickNewPassenger()">
+                        <i class="fas fa-user-plus me-2"></i> New Passenger
+                    </button>
+                    <button class="action-btn w-100 text-start" onclick="showPassengerExit()">
+                        <i class="fas fa-user-minus me-2"></i> Passenger Exit
+                    </button>
+                    <button class="action-btn w-100 text-start" onclick="location.href='/history'">
+                        <i class="fas fa-search me-2"></i> Search History
+                    </button>
+                    <button class="action-btn w-100 text-start" onclick="generateReport()">
+                        <i class="fas fa-file-export me-2"></i> Generate Report
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="real-time-updates mt-4 mb-5">
+            <h3><i class="fas fa-sync-alt"></i> Real-time Updates</h3>
+            <div class="updates-log" id="updatesLog"></div>
+        </div>
+    </div>
+
+    <div class="modal" id="exitModal">
+        <div class="modal-content">
+            <h3><i class="fas fa-door-open"></i> Passenger Exit</h3>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="exitPassengerId">Passenger ID:</label>
+                    <input type="text" id="exitPassengerId" placeholder="Enter passenger ID">
+                </div>
+                <div class="modal-actions">
+                    <button class="btn btn-secondary" onclick="closeExitModal()">Cancel</button>
+                    <button class="btn btn-primary" onclick="processExit()">Process Exit</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <div class="container text-center">
+            <p class="mb-2">© 2024 Travel Agent Supporting Tool. All rights reserved.</p>
+            <p class="text-muted" style="color: #adb5bd !important;">Powered by AI & Machine Learning Technologies</p>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        const socket = io({ path: '/socket.io', transports: ['websocket', 'polling'] });
+
+        socket.on('connection_established', (data) => {
+            console.log('Socket connected:', data);
+        });
+
+        // Duration timer
+        function updateDuration() {
+            {% if current_bus_turn %}
+            const startTime = new Date("{{ current_bus_turn.start_time.isoformat() }}");
+            const now = new Date();
+            const diff = Math.floor((now - startTime) / 1000);
+            const hours = Math.floor(diff / 3600);
+            const minutes = Math.floor((diff % 3600) / 60);
+            const seconds = diff % 60;
+            const el = document.getElementById('duration');
+            if (el) {
+                el.textContent =
+                    `${hours.toString().padStart(2,'0')}:${minutes.toString().padStart(2,'0')}:${seconds.toString().padStart(2,'0')}`;
+            }
+            {% endif %}
+        }
+        setInterval(updateDuration, 1000);
+        updateDuration();
+
+        // Real-time events
+        socket.on('passenger_entered', (data) => {
+            appendUpdate('normal', `Passenger ${data.passenger_id} entered`);
+            refreshStats();
+        });
+
+        socket.on('passenger_exit', (data) => {
+            const alertType = data.anomaly ? 'anomaly' : 'normal';
+            appendUpdate(alertType, `Passenger ${data.passenger_id} exited — ${data.anomaly ? 'ANOMALY DETECTED' : 'Normal'} (${(data.confidence*100).toFixed(1)}%)`);
+            refreshStats();
+        });
+
+        socket.on('bus_turn_started', (data) => {
+            appendUpdate('normal', `Bus turn started: ${data.bus_turn_id}`);
+            location.reload();
+        });
+
+        socket.on('journey_ended', (data) => {
+            appendUpdate('normal', `Bus turn ended. Passengers: ${data.total_passengers}, Anomalies: ${data.anomalies_detected}`);
+            location.reload();
+        });
+
+        function appendUpdate(type, text) {
+            const log = document.getElementById('updatesLog');
+            const item = document.createElement('div');
+            item.className = `update-item update-${type}`;
+            const ts = new Date().toLocaleTimeString();
+            item.innerHTML = `
+                <span class="update-time">${ts}</span>
+                <span class="update-text">${text}</span>
+            `;
+            log.insertBefore(item, log.firstChild);
+            while (log.children.length > 50) log.removeChild(log.lastChild);
+        }
+
+        // Start/End Journey
+        async function startJourney() {
+            const btn = document.getElementById('startJourneyBtn');
+            if (btn) btn.disabled = true;
+            try {
+                const res = await fetch('/start_journey', { method: 'POST' });
+                const data = await res.json();
+                if (data && data.success) {
+                    alert('Journey started: ' + data.bus_turn_id);
+                    location.reload();
+                } else {
+                    alert('Failed to start journey: ' + (data.error || 'Unknown error'));
+                    if (btn) btn.disabled = false;
+                }
+            } catch (e) {
+                alert('Network error starting journey: ' + (e.message || e));
+                if (btn) btn.disabled = false;
+            }
+        }
+
+        async function endJourney() {
+            const btn = document.getElementById('endJourneyBtn');
+            if (!confirm('Are you sure you want to end the current bus turn?')) return;
+            if (btn) btn.disabled = true;
+            try {
+                const res = await fetch('/end_journey', { method: 'POST' });
+                const data = await res.json();
+                if (data.success) {
+                    alert('Bus turn ended successfully!');
+                    location.reload();
+                } else {
+                    alert('Failed to end bus turn: ' + data.error);
+                    if (btn) btn.disabled = false;
+                }
+            } catch (e) {
+                alert('Network error ending journey: ' + (e.message || e));
+                if (btn) btn.disabled = false;
+            }
+        }
+
+        // Quick actions
+        async function quickNewPassenger() {
+            const id = prompt('Enter Passenger ID (e.g., P123):');
+            if (!id) return;
+            try { await fetch('/api/camera/stop', { method: 'POST' }); } catch {}
+            setTimeout(() => {
+                location.href = `/capture?passenger_id=${encodeURIComponent(id)}&type=entrance`;
+            }, 200);
+        }
+
+        function showPassengerExit() {
+            document.getElementById('exitModal').style.display = 'flex';
+        }
+        function closeExitModal() {
+            document.getElementById('exitModal').style.display = 'none';
+        }
+        async function processExit() {
+            const passengerId = document.getElementById('exitPassengerId').value;
+            if (!passengerId) { alert('Please enter a passenger ID'); return; }
+            try { await fetch('/api/camera/stop', { method: 'POST' }); } catch {}
+            setTimeout(() => {
+                location.href = `/capture_exit/${encodeURIComponent(passengerId)}`;
+            }, 200);
+        }
+
+        function generateReport() {
+            alert('Report generation feature coming soon!');
+        }
+
+        // Stats polling
+        async function refreshStats() {
+            try {
+                const res = await fetch('/api/dashboard_stats');
+                const s = await res.json();
+                const ap = document.getElementById('statActivePassengers');
+                const tj = document.getElementById('statTodayJourneys');
+                const an = document.getElementById('statAnomalies');
+                if (ap) ap.textContent = s.active_passengers;
+                if (tj) tj.textContent = s.today_journeys;
+                if (an) an.textContent = s.anomalies;
+            } catch (e) {
+                console.warn('Failed to refresh stats', e);
+            }
+        }
+        setInterval(refreshStats, 8000);
+
+        // Close modal on outside click
+        window.onclick = function(event) {
+            const modal = document.getElementById('exitModal');
+            if (event.target === modal) closeExitModal();
+        }
+    </script>
+</body>
+</html>

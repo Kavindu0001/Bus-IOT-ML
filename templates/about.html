@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>About - Passenger Anomaly Detection System</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="container about-container">
+        <header class="about-header">
+            <h1><i class="fas fa-info-circle"></i> About the System</h1>
+            <div class="header-actions">
+                <button class="btn btn-primary" onclick="location.href='/'">
+                    <i class="fas fa-home"></i> Home
+                </button>
+                <button class="btn btn-secondary" onclick="location.href='/dashboard'">
+                    <i class="fas fa-tachometer-alt"></i> Dashboard
+                </button>
+            </div>
+        </header>
+
+        <div class="about-content">
+            <!-- System Overview -->
+            <section class="about-section">
+                <h2><i class="fas fa-cogs"></i> System Overview</h2>
+                <div class="section-content">
+                    <p>
+                        The Passenger Anomaly Detection System is a comprehensive web application designed for
+                        real-time monitoring of passenger appearance changes during bus journeys. The system uses
+                        advanced Machine Learning techniques to detect potential security threats and appearance
+                        anomalies.
+                    </p>
+
+                    <div class="features-grid">
+                        <div class="feature-item">
+                            <div class="feature-icon">
+                                <i class="fas fa-camera"></i>
+                            </div>
+                            <h4>Real-time Image Capture</h4>
+                            <p>Capture 4 entrance images within 5 seconds and 1 exit image for comparison</p>
+                        </div>
+
+                        <div class="feature-item">
+                            <div class="feature-icon">
+                                <i class="fas fa-brain"></i>
+                            </div>
+                            <h4>GAN-based Detection</h4>
+                            <p>Uses Generative Adversarial Networks for accurate anomaly detection</p>
+                        </div>
+
+                        <div class="feature-item">
+                            <div class="feature-icon">
+                                <i class="fas fa-user-shield"></i>
+                            </div>
+                            <h4>Person Re-identification</h4>
+                            <p>Siamese network for reliable person matching across different time points</p>
+                        </div>
+
+                        <div class="feature-item">
+                            <div class="feature-icon">
+                                <i class="fas fa-database"></i>
+                            </div>
+                            <h4>Comprehensive Tracking</h4>
+                            <p>MongoDB database for storing all journey data, images, and alerts</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Architecture -->
+            <section class="about-section">
+                <h2><i class="fas fa-sitemap"></i> System Architecture</h2>
+                <div class="section-content">
+                    <div class="architecture-diagram">
+                        <div class="arch-layer">
+                            <h4>Frontend Layer</h4>
+                            <ul>
+                                <li>Flask Templates (HTML/CSS/JavaScript)</li>
+                                <li>Real-time WebSocket updates</li>
+                                <li>Responsive dashboard interface</li>
+                            </ul>
+                        </div>
+
+                        <div class="arch-layer">
+                            <h4>Application Layer</h4>
+                            <ul>
+                                <li>Flask web application</li>
+                                <li>RESTful API endpoints</li>
+                                <li>Image processing pipeline</li>
+                                <li>Business logic implementation</li>
+                            </ul>
+                        </div>
+
+                        <div class="arch-layer">
+                            <h4>ML Layer</h4>
+                            <ul>
+                                <li>GAN models for anomaly detection</li>
+                                <li>Siamese network for person re-ID</li>
+                                <li>TensorFlow/Keras inference engine</li>
+                                <li>Real-time processing (< 5 seconds)</li>
+                            </ul>
+                        </div>
+
+                        <div class="arch-layer">
+                            <h4>Data Layer</h4>
+                            <ul>
+                                <li>MongoDB database</li>
+                                <li>5 collections for comprehensive tracking</li>
+                                <li>Image storage and metadata management</li>
+                                <li>Real-time logging and auditing</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ML Models -->
+            <section class="about-section">
+                <h2><i class="fas fa-robot"></i> Machine Learning Models</h2>
+                <div class="section-content">
+                    <div class="model-info">
+                        <h4>GAN (Generative Adversarial Network)</h4>
+                        <ul>
+                            <li><strong>Generator:</strong> Creates synthetic passenger images for training</li>
+                            <li><strong>Discriminator:</strong> Distinguishes between real and generated images</li>
+                            <li><strong>Purpose:</strong> Learns normal appearance patterns for anomaly detection</li>
+                        </ul>
+                    </div>
+
+                    <div class="model-info">
+                        <h4>Siamese Network</h4>
+                        <ul>
+                            <li><strong>Architecture:</strong> Twin neural networks with shared weights</li>
+                            <li><strong>Purpose:</strong> Person re-identification and similarity measurement</li>
+                            <li><strong>Output:</strong> Similarity score between entrance and exit images</li>
+                        </ul>
+                    </div>
+
+                    <div class="model-info">
+                        <h4>Anomaly Detection Pipeline</h4>
+                        <ol>
+                            <li>Image preprocessing (128x128 RGB normalization)</li>
+                            <li>Feature extraction using Siamese network base model</li>
+                            <li>Similarity calculation using cosine similarity</li>
+                            <li>Anomaly classification based on threshold (0.7)</li>
+                            <li>Confidence scoring and alert generation</li>
+                        </ol>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Database Schema -->
+            <section class="about-section">
+                <h2><i class="fas fa-table"></i> Database Schema</h2>
+                <div class="section-content">
+                    <div class="schema-tables">
+                        <div class="schema-table">
+                            <h5>passengers</h5>
+                            <ul>
+                                <li>passenger_id (String)</li>
+                                <li>name (String)</li>
+                                <li>total_journeys (Int)</li>
+                                <li>last_seen (Date)</li>
+                                <li>created_at (Date)</li>
+                            </ul>
+                        </div>
+
+                        <div class="schema-table">
+                            <h5>journeys</h5>
+                            <ul>
+                                <li>journey_id (String)</li>
+                                <li>bus_turn_id (String)</li>
+                                <li>passenger_id (String)</li>
+                                <li>entrance_time (Date)</li>
+                                <li>exit_time (Date)</li>
+                                <li>travel_time_seconds (Int)</li>
+                                <li>date (Date)</li>
+                            </ul>
+                        </div>
+
+                        <div class="schema-table">
+                            <h5>images</h5>
+                            <ul>
+                                <li>image_id (String)</li>
+                                <li>passenger_id (String)</li>
+                                <li>image_type (String)</li>
+                                <li>image_path (String)</li>
+                                <li>timestamp (Date)</li>
+                                <li>journey_id (String)</li>
+                            </ul>
+                        </div>
+
+                        <div class="schema-table">
+                            <h5>alerts</h5>
+                            <ul>
+                                <li>alert_id (String)</li>
+                                <li>passenger_id (String)</li>
+                                <li>journey_id (String)</li>
+                                <li>alert_type (String)</li>
+                                <li>confidence (Double)</li>
+                                <li>timestamp (Date)</li>
+                                <li>image_paths (Array)</li>
+                            </ul>
+                        </div>
+
+                        <div class="schema-table">
+                            <h5>system_logs</h5>
+                            <ul>
+                                <li>log_id (String)</li>
+                                <li>event_type (String)</li>
+                                <li>description (String)</li>
+                                <li>timestamp (Date)</li>
+                                <li>metadata (Object)</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- API Documentation -->
+            <section class="about-section">
+                <h2><i class="fas fa-code"></i> API Documentation</h2>
+                <div class="section-content">
+                    <div class="api-endpoints">
+                        <div class="api-endpoint">
+                            <code>POST /start_journey</code>
+                            <p>Start a new bus turn</p>
+                        </div>
+
+                        <div class="api-endpoint">
+                            <code>POST /capture_entrance/&lt;passenger_id&gt;</code>
+                            <p>Capture 4 entrance images for a passenger</p>
+                        </div>
+
+                        <div class="api-endpoint">
+                            <code>POST /capture_exit/&lt;passenger_id&gt;</code>
+                            <p>Capture exit image and run anomaly detection</p>
+                        </div>
+
+                        <div class="api-endpoint">
+                            <code>GET /result/&lt;passenger_id&gt;</code>
+                            <p>View detection results for a passenger</p>
+                        </div>
+
+                        <div class="api-endpoint">
+                            <code>GET /dashboard</code>
+                            <p>Real-time monitoring dashboard</p>
+                        </div>
+
+                        <div class="api-endpoint">
+                            <code>GET /history</code>
+                            <p>Passenger travel history with filters</p>
+                        </div>
+
+                        <div class="api-endpoint">
+                            <code>POST /end_journey</code>
+                            <p>End current bus turn and generate report</p>
+                        </div>
+
+                        <div class="api-endpoint">
+                            <code>GET /api/recent_alerts</code>
+                            <p>Get recent alerts (JSON API)</p>
+                        </div>
+
+                        <div class="api-endpoint">
+                            <code>GET /api/passenger_history/&lt;passenger_id&gt;</code>
+                            <p>Get passenger journey history (JSON API)</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Technical Specifications -->
+            <section class="about-section">
+                <h2><i class="fas fa-microchip"></i> Technical Specifications</h2>
+                <div class="section-content">
+                    <div class="specs-grid">
+                        <div class="spec-item">
+                            <h4>Backend Framework</h4>
+                            <p>Flask (Python)</p>
+                        </div>
+
+                        <div class="spec-item">
+                            <h4>ML Framework</h4>
+                            <p>TensorFlow 2.x, Keras 3.x</p>
+                        </div>
+
+                        <div class="spec-item">
+                            <h4>Database</h4>
+                            <p>MongoDB (PyMongo driver)</p>
+                        </div>
+
+                        <div class="spec-item">
+                            <h4>Image Processing</h4>
+                            <p>OpenCV, PIL/Pillow</p>
+                        </div>
+
+                        <div class="spec-item">
+                            <h4>Real-time Communication</h4>
+                            <p>Flask-SocketIO, WebSocket</p>
+                        </div>
+
+                        <div class="spec-item">
+                            <h4>Frontend</h4>
+                            <p>HTML5, CSS3, JavaScript (ES6+)</p>
+                        </div>
+
+                        <div class="spec-item">
+                            <h4>Image Resolution</h4>
+                            <p>128x128 pixels (RGB)</p>
+                        </div>
+
+                        <div class="spec-item">
+                            <h4>Processing Time</h4>
+                            <p>&lt; 5 seconds per passenger</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Getting Started -->
+            <section class="about-section">
+                <h2><i class="fas fa-play-circle"></i> Getting Started</h2>
+                <div class="section-content">
+                    <div class="getting-started-steps">
+                        <div class="step">
+                            <div class="step-number">1</div>
+                            <div class="step-content">
+                                <h4>Installation</h4>
+                                <p>Install required dependencies:</p>
+                                <code>pip install flask flask-socketio pymongo opencv-python tensorflow pillow</code>
+                            </div>
+                        </div>
+
+                        <div class="step">
+                            <div class="step-number">2</div>
+                            <div class="step-content">
+                                <h4>Database Setup</h4>
+                                <p>Start MongoDB and create the database:</p>
+                                <code>mongod --dbpath ./data --port 27017</code>
+                            </div>
+                        </div>
+
+                        <div class="step">
+                            <div class="step-number">3</div>
+                            <div class="step-content">
+                                <h4>Model Setup</h4>
+                                <p>Place trained models in the models/ directory:</p>
+                                <ul>
+                                    <li>generator.keras</li>
+                                    <li>discriminator.keras</li>
+                                    <li>gan.keras</li>
+                                    <li>siamese_network.keras</li>
+                                    <li>passenger_database.pkl</li>
+                                    <li>preprocessor_config.json</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="step">
+                            <div class="step-number">4</div>
+                            <div class="step-content">
+                                <h4>Run Application</h4>
+                                <p>Start the Flask application:</p>
+                                <code>python app.py</code>
+                                <p>Access the system at: <a href="http://localhost:5000">http://localhost:5000</a></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- Footer -->
+        <footer class="about-footer">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4><i class="fas fa-shield-alt"></i> Security Features</h4>
+                    <ul>
+                        <li>Real-time anomaly detection</li>
+                        <li>Comprehensive audit logging</li>
+                        <li>Data encryption at rest</li>
+                        <li>Secure WebSocket communication</li>
+                    </ul>
+                </div>
+
+                <div class="footer-section">
+                    <h4><i class="fas fa-chart-line"></i> Performance Metrics</h4>
+                    <ul>
+                        <li>99.9% uptime</li>
+                        <li>&lt; 5 second processing time</li>
+                        <li>Real-time WebSocket updates</li>
+                        <li>Scalable MongoDB architecture</li>
+                    </ul>
+                </div>
+
+                <div class="footer-section">
+                    <h4><i class="fas fa-question-circle"></i> Support</h4>
+                    <p>For technical support or questions:</p>
+                    <p>Email: support@anomalydetection.com</p>
+                    <p>Documentation: <a href="#">View Full Docs</a></p>
+                </div>
+            </div>
+
+            <div class="footer-bottom">
+                <p>&copy; 2024 Passenger Anomaly Detection System. All rights reserved.</p>
+                <p>Version 1.0.0 | Built with Flask, TensorFlow, and MongoDB</p>
+            </div>
+        </footer>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>

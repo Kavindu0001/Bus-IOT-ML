@@ -1,0 +1,49 @@
+<component name="InspectionProjectProfileManager">
+  <profile version="1.0">
+    <option name="myName" value="Project Default" />
+    <inspection_tool class="PyPackageRequirementsInspection" enabled="true" level="WARNING" enabled_by_default="true">
+      <option name="ignoredPackages">
+        <list>
+          <option value="bcrypt" />
+          <option value="cffi" />
+          <option value="colorama" />
+          <option value="cryptography" />
+          <option value="easyocr" />
+          <option value="et_xmlfile" />
+          <option value="filelock" />
+          <option value="Flask-Login" />
+          <option value="Flask-PyMongo" />
+          <option value="fsspec" />
+          <option value="ImageIO" />
+          <option value="lazy_loader" />
+          <option value="lxml" />
+          <option value="mongo" />
+          <option value="mpmath" />
+          <option value="networkx" />
+          <option value="ninja" />
+          <option value="nltk" />
+          <option value="openpyxl" />
+          <option value="pdf2image" />
+          <option value="pdfminer.six" />
+          <option value="pyclipper" />
+          <option value="pycparser" />
+          <option value="PyPDF2" />
+          <option value="pytesseract" />
+          <option value="python-bidi" />
+          <option value="python-docx" />
+          <option value="PyYAML" />
+          <option value="regex" />
+          <option value="scikit-image" />
+          <option value="shapely" />
+          <option value="sympy" />
+          <option value="tensorflow-io-gcs-filesystem" />
+          <option value="tensorflow_intel" />
+          <option value="tifffile" />
+          <option value="torch" />
+          <option value="torchvision" />
+          <option value="opencv-python" />
+        </list>
+      </option>
+    </inspection_tool>
+  </profile>
+</component>

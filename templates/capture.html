@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Passenger Capture Hub</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: white;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Navbar & System Status Styles */
+        .navbar-brand { font-weight: bold; font-size: 1.5rem; }
+        .live-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            background-color: #2ecc71;
+            border-radius: 50%;
+            margin-right: 5px;
+            animation: pulse-green 2s infinite;
+        }
+        @keyframes pulse-green {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        .system-status {
+            font-size: 0.9rem;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            background: rgba(46, 204, 113, 0.1);
+            border: 1px solid rgba(46, 204, 113, 0.3);
+            color: #ecf0f1;
+        }
+
+        .app-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 30px 20px;
+            flex: 1;
+            width: 100%;
+        }
+
+        /* Bus Turn Banner */
+        .bus-turn-banner {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 20px 25px;
+            border-radius: 15px;
+            margin-bottom: 25px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            border-left: 5px solid #2ecc71;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            border-right: 1px solid rgba(255,255,255,0.1);
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .bus-turn-banner h4 { margin-top: 0; margin-bottom: 15px; color: #4cc9f0; display: flex; align-items: center; gap: 10px;}
+        .bus-turn-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; font-size: 1.05rem; }
+
+        /* Lock Overlay if no bus turn */
+        .locked-overlay {
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(26, 26, 46, 0.95); z-index: 100;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            border-radius: 15px; text-align: center;
+        }
+
+        /* Camera Feed Shared */
+        .camera-section {
+            background: rgba(0, 0, 0, 0.3); border-radius: 15px; padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1);
+            margin-bottom: 30px; position: relative; text-align: center;
+        }
+        .camera-container {
+            position: relative; width: 100%; max-width: 720px; height: 400px; background: #000;
+            border-radius: 10px; overflow: hidden; margin: 0 auto 15px auto; border: 1px solid rgba(255,255,255,0.1);
+        }
+        #cameraPreview { width: 100%; height: 100%; object-fit: cover; }
+
+        .capture-countdown {
+            position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+            background: rgba(0,0,0,0.8); padding: 10px 20px; border-radius: 20px;
+            font-weight: bold; color: #4cc9f0; border: 1px solid #4cc9f0;
+        }
+
+        /* Dual Panels */
+        .dual-panels {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 30px; position: relative;
+        }
+        @media (max-width: 992px) { .dual-panels { grid-template-columns: 1fr; } }
+
+        .stage-panel {
+            background: rgba(255, 255, 255, 0.03); border-radius: 15px; padding: 25px;
+            border: 2px solid rgba(255, 255, 255, 0.05); transition: all 0.3s ease;
+            position: relative; overflow: hidden; display: flex; flex-direction: column;
+        }
+        .stage-panel:hover {
+            border-color: rgba(76, 201, 240, 0.3);
+            background: rgba(255, 255, 255, 0.05);
+        }
+        .stage-panel.active-stage {
+            border-color: #4cc9f0; background: rgba(76, 201, 240, 0.05);
+            box-shadow: 0 0 20px rgba(76, 201, 240, 0.15);
+        }
+        .stage-panel.disabled { opacity: 0.5; pointer-events: none; }
+
+        .stage-title { font-size: 1.5rem; margin-bottom: 20px; color: #fff; display: flex; align-items: center; justify-content: space-between; }
+        .stage-title i { color: #4cc9f0; }
+
+        .btn-custom {
+            padding: 12px 20px; border: none; border-radius: 8px; font-size: 1rem;
+            font-weight: 600; cursor: pointer; transition: all 0.3s ease;
+            display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; margin-bottom: 15px;
+        }
+        .btn-primary-custom { background: linear-gradient(135deg, #4361ee 0%, #3a0ca3 100%); color: white; }
+        .btn-primary-custom:hover { transform: translateY(-2px); box-shadow: 0 8px 15px rgba(67, 97, 238, 0.3); color: white; }
+        .btn-success-custom { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; }
+        .btn-success-custom:hover { transform: translateY(-2px); box-shadow: 0 8px 15px rgba(16, 185, 129, 0.3); color: white; }
+        .btn-secondary-custom { background: rgba(255, 255, 255, 0.1); color: white; border: 1px solid rgba(255, 255, 255, 0.2); }
+        .btn-secondary-custom:hover { background: rgba(255, 255, 255, 0.2); color: white; }
+
+        .images-grid {
+            display: flex; flex-wrap: wrap; gap: 10px; margin-top: 15px; justify-content: center; min-height: 80px;
+        }
+        .image-preview {
+            width: 70px; height: 70px; border-radius: 8px; overflow: hidden; border: 2px solid #4cc9f0; position: relative;
+        }
+        .image-preview img { width: 100%; height: 100%; object-fit: cover; }
+
+        /* Results Display */
+        .result-box {
+            margin-top: 20px; padding: 20px; border-radius: 10px; background: rgba(0,0,0,0.3);
+            display: flex; flex-direction: column; align-items: center; gap: 10px; border: 1px solid rgba(255,255,255,0.1);
+            text-align: center;
+        }
+        .result-box.anomaly { border-color: #ef4444; background: rgba(239, 68, 68, 0.1); }
+        .result-box.safe { border-color: #10b981; background: rgba(16, 185, 129, 0.1); }
+        .result-box.nomatch { border-color: #f59e0b; background: rgba(245, 158, 11, 0.1); }
+        .result-img { width: 120px; height: 120px; border-radius: 8px; object-fit: cover; border: 3px solid rgba(255,255,255,0.2); }
+        .result-text { font-weight: 600; font-size: 1.15rem; margin-bottom: 5px; }
+        .result-time { font-size: 0.85rem; color: #94a3b8; }
+
+        /* Unified Results & Stats Section */
+        .unified-results-container {
+            margin-top: 30px;
+            background: rgba(0, 0, 0, 0.3); border-radius: 15px; padding: 25px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 25px; }
+        .stat-card {
+            background: rgba(255,255,255,0.05); padding: 15px; border-radius: 10px;
+            text-align: center; border: 1px solid rgba(255,255,255,0.05);
+        }
+        .stat-val { font-size: 2rem; font-weight: 700; color: #4cc9f0; }
+        .stat-label { font-size: 0.9rem; opacity: 0.7; text-transform: uppercase; }
+
+        .results-log { max-height: 300px; overflow-y: auto; padding-right: 10px; }
+
+        /* Individual List Result Row */
+        .result-row {
+            display: flex; align-items: center; justify-content: space-between; gap: 15px;
+            background: rgba(255,255,255,0.05); border-left: 4px solid #3b82f6;
+            padding: 12px 15px; border-radius: 8px; margin-bottom: 10px;
+            animation: slideIn 0.3s ease;
+        }
+        .result-row.safe { border-left-color: #10b981; background: rgba(16, 185, 129, 0.05); }
+        .result-row.anomaly { border-left-color: #ef4444; background: rgba(239, 68, 68, 0.05); }
+        .result-row.warning { border-left-color: #f59e0b; background: rgba(245, 158, 11, 0.05); }
+
+        .result-thumb { width: 45px; height: 45px; border-radius: 6px; object-fit: cover; border: 1px solid rgba(255,255,255,0.2); }
+        .result-info { flex: 1; font-weight: 500; font-size: 1.05rem; display: flex; align-items: center; gap: 15px;}
+        .result-time { font-size: 0.8rem; opacity: 0.6; }
+
+        /* Notification */
+        .notification-toast {
+            position: fixed; top: 20px; right: 20px; padding: 15px 25px; border-radius: 8px; color: white;
+            font-weight: 500; z-index: 9999; box-shadow: 0 5px 15px rgba(0,0,0,0.3); display: flex; align-items: center; gap: 10px;
+        }
+
+        footer { margin-top: auto; padding: 2rem 0; background: rgba(0,0,0,0.8); color: white; border-top: 1px solid rgba(255,255,255,0.1); }
+
+        @keyframes slideIn { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar navbar-expand-lg navbar-dark" style="background-color: rgba(0,0,0,0.8); border-bottom: 1px solid rgba(255,255,255,0.1);">
+        <div class="container-fluid px-4">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-bus me-2"></i>Travel Agent Supporting Tool
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item"><a class="nav-link" href="/">Home</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/history">History</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/about">About</a></li>
+                </ul>
+                <div class="system-status ms-3">
+                    <span class="live-indicator"></span> System Ready
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="app-container">
+
+        <div class="bus-turn-banner" id="busTurnBanner">
+            {% if current_bus_turn %}
+            <h4><i class="fas fa-bus"></i> Current Bus Turn</h4>
+            <div class="bus-turn-grid">
+                <div><span style="opacity: 0.7;">Turn ID:</span> <br><strong>{{ current_bus_turn.bus_turn_id }}</strong></div>
+                <div><span style="opacity: 0.7;">Started:</span> <br><strong>{{ current_bus_turn.start_time.strftime('%H:%M:%S') }}</strong></div>
+                <div><span style="opacity: 0.7;">Duration:</span> <br><strong id="turnDuration">00:00:00</strong></div>
+                <div><span style="opacity: 0.7;">Occupancy:</span> <br><strong id="seatOccupancy" style="color: #4cc9f0;">{{ current_bus_turn.passenger_count }} / 54</strong></div>
+            </div>
+            {% else %}
+            <h4><i class="fas fa-exclamation-circle text-warning"></i> No Active Journey</h4>
+            <p class="m-0 text-muted">Please start a bus turn from the dashboard before capturing passengers.</p>
+            {% endif %}
+        </div>
+
+        <div style="position: relative;">
+            {% if not current_bus_turn %}
+            <div class="locked-overlay">
+                <i class="fas fa-lock fa-4x mb-3 text-secondary"></i>
+                <h2>System Locked</h2>
+                <p>A bus turn must be active to perform captures.</p>
+                <button class="btn btn-primary mt-3" onclick="location.href='/dashboard'">Go to Dashboard</button>
+            </div>
+            {% endif %}
+
+            <div class="camera-section">
+                <h2 class="section-title text-center mb-3" style="color: #4cc9f0;"><i class="fas fa-camera"></i> Live Capture Feed</h2>
+                <div class="camera-container">
+                    <video id="cameraPreview" autoplay playsinline muted></video>
+                    <div class="capture-countdown" id="countdown" style="display: none;">Ready to capture</div>
+                </div>
+            </div>
+
+            <div class="dual-panels">
+
+                <div class="stage-panel" id="panelEntrance">
+                    <div class="stage-title">
+                        <span><i class="fas fa-door-open me-2"></i> Entrance Stage</span>
+                        <span style="font-size: 0.9rem; background: rgba(255,255,255,0.1); padding: 4px 10px; border-radius: 12px;" id="entranceProgress">0 / 5</span>
+                    </div>
+
+                    <div id="wrapperEntrance">
+                        <button class="btn-custom btn-secondary-custom mb-4" id="btnEnableEntrance" onclick="enableStage('entrance')">
+                            <i class="fas fa-power-off"></i> Enable Entrance Capture
+                        </button>
+
+                        <div id="controlsEntrance" style="display: none;">
+                            <button class="btn-custom btn-primary-custom" id="btnAutoEntrance" onclick="autoCapture('entrance')">
+                                <i class="fas fa-bolt"></i> Auto-capture (5 images)
+                            </button>
+                            <button class="btn-custom btn-success-custom" id="btnSubmitEntrance" onclick="submitEntrance()" disabled>
+                                <i class="fas fa-paper-plane"></i> Submit Entrance Images
+                            </button>
+                            <div class="images-grid" id="gridEntrance"></div>
+                        </div>
+                    </div>
+
+                    <div class="result-box" id="resultEntrance" style="display: none;">
+                        <img src="" class="result-img" id="imgResultEntrance" style="display: none;">
+                        <div class="result-text" id="textResultEntrance"></div>
+                        <div class="result-time" id="timeResultEntrance"></div>
+                        <button class="btn btn-sm btn-outline-light mt-3" onclick="resetStage('entrance')"><i class="fas fa-redo"></i> Capture Next Entrance</button>
+                    </div>
+                </div>
+
+                <div class="stage-panel" id="panelExit">
+                    <div class="stage-title">
+                        <span><i class="fas fa-door-closed me-2"></i> Exit Stage</span>
+                        <span style="font-size: 0.9rem; background: rgba(255,255,255,0.1); padding: 4px 10px; border-radius: 12px;" id="exitProgress">0 / 5</span>
+                    </div>
+
+                    <div id="wrapperExit">
+                        <button class="btn-custom btn-secondary-custom mb-4" id="btnEnableExit" onclick="enableStage('exit')">
+                            <i class="fas fa-power-off"></i> Enable Exit Capture
+                        </button>
+
+                        <div id="controlsExit" style="display: none;">
+                            <button class="btn-custom btn-primary-custom" id="btnAutoExit" onclick="autoCapture('exit')">
+                                <i class="fas fa-bolt"></i> Auto-capture (5 images)
+                            </button>
+                            <button class="btn-custom btn-success-custom" id="btnSubmitExit" onclick="submitExit()" disabled>
+                                <i class="fas fa-paper-plane"></i> Submit Exit Images
+                            </button>
+                            <div class="images-grid" id="gridExit"></div>
+                        </div>
+                    </div>
+
+                    <div class="result-box" id="resultExit" style="display: none;">
+                        <img src="" class="result-img" id="imgResultExit" style="display: none;">
+                        <div class="result-text" id="textResultExit"></div>
+                        <div class="result-time" id="timeResultExit"></div>
+                        <button class="btn btn-sm btn-outline-light mt-3" onclick="resetStage('exit')"><i class="fas fa-redo"></i> Capture Next Exit</button>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="unified-results-container">
+                <h3 style="color: #4cc9f0; margin-bottom: 20px;"><i class="fas fa-clipboard-list"></i> Capture Activity Log & Statistics</h3>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-val" id="statTotalEntered">0</div>
+                        <div class="stat-label">Total Boarded</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-val" id="statTotalExited">0</div>
+                        <div class="stat-label">Total Exited</div>
+                    </div>
+                    <div class="stat-card" style="border-color: rgba(239, 68, 68, 0.3);">
+                        <div class="stat-val" id="statAnomalies" style="color: #ef4444;">0</div>
+                        <div class="stat-label">Anomalies Detected</div>
+                    </div>
+                </div>
+
+                <div class="results-log" id="captureResultsLog">
+                    <div class="text-center" id="emptyLogState" style="opacity: 0.5; padding: 20px;">
+                        No captures processed yet during this session.
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <footer>
+        <div class="container text-center">
+            <p class="mb-2">© 2024 Travel Agent Supporting Tool. All rights reserved.</p>
+            <p class="text-muted" style="color: #adb5bd !important;">Powered by AI & Machine Learning Technologies</p>
+        </div>
+    </footer>
+
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    <script>
+        // Polyfill
+        (function ensureGetUserMediaPolyfill() {
+            if (!navigator.mediaDevices) navigator.mediaDevices = {};
+            if (!navigator.mediaDevices.getUserMedia) {
+                navigator.mediaDevices.getUserMedia = function (constraints) {
+                    const getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
+                    if (!getUserMedia) return Promise.reject(new Error('getUserMedia not supported in this browser'));
+                    return new Promise((resolve, reject) => getUserMedia.call(navigator, constraints, resolve, reject));
+                };
+            }
+        })();
+
+        // Globals
+        let stream = null;
+        let isCapturing = false;
+
+        let stats = { entered: 0, exited: 0, anomalies: 0 };
+        let images = { entrance: [], exit: [] };
+        const requiredImages = 5;
+
+        const cameraPreview = document.getElementById('cameraPreview');
+        const countdown = document.getElementById('countdown');
+        const resultsLog = document.getElementById('captureResultsLog');
+
+        // Restore Session State on Reload
+        function loadSessionState() {
+            const savedStats = localStorage.getItem('captureStats');
+            const savedLogs = localStorage.getItem('captureLogs');
+
+            if (savedStats) {
+                stats = JSON.parse(savedStats);
+                document.getElementById('statTotalEntered').textContent = stats.entered;
+                document.getElementById('statTotalExited').textContent = stats.exited;
+                document.getElementById('statAnomalies').textContent = stats.anomalies;
+            }
+
+            if (savedLogs && savedLogs.trim().length > 0) {
+                const emptyState = document.getElementById('emptyLogState');
+                if (emptyState) emptyState.remove();
+                resultsLog.innerHTML = savedLogs;
+            }
+        }
+
+        // Save State
+        function saveSessionState() {
+            localStorage.setItem('captureStats', JSON.stringify(stats));
+            localStorage.setItem('captureLogs', resultsLog.innerHTML);
+        }
+
+        // Durations
+        {% if current_bus_turn %}
+        const startTimeStr = "{{ current_bus_turn.start_time.isoformat() }}";
+        setInterval(() => {
+            const diff = Math.floor((new Date() - new Date(startTimeStr)) / 1000);
+            const h = Math.floor(diff / 3600).toString().padStart(2,'0');
+            const m = Math.floor((diff % 3600) / 60).toString().padStart(2,'0');
+            const s = (diff % 60).toString().padStart(2,'0');
+            const el = document.getElementById('turnDuration');
+            if (el) el.textContent = `${h}:${m}:${s}`;
+        }, 1000);
+        {% endif %}
+
+        // Camera Init
+        async function startCamera() {
+            try { await fetch('/api/camera/stop', { method: 'POST' }); } catch {}
+            const primary = { video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' }, audio: false };
+            try {
+                stream = await navigator.mediaDevices.getUserMedia(primary);
+                cameraPreview.srcObject = stream;
+            } catch (err) {
+                showToast(`Failed to access camera. Check permissions.`, 'error');
+            }
+        }
+
+        // UI Management - Enables independently!
+        function enableStage(stage) {
+            if (isCapturing) {
+                showToast('Camera is busy capturing.', 'warning');
+                return;
+            }
+            document.getElementById(`panel${stage.charAt(0).toUpperCase() + stage.slice(1)}`).classList.add('active-stage');
+            document.getElementById(`controls${stage.charAt(0).toUpperCase() + stage.slice(1)}`).style.display = 'block';
+            document.getElementById(`btnEnable${stage.charAt(0).toUpperCase() + stage.slice(1)}`).style.display = 'none';
+            images[stage] = [];
+            updateGrid(stage);
+        }
+
+        function resetStage(stage) {
+            images[stage] = [];
+            updateGrid(stage);
+            document.getElementById(`controls${stage.charAt(0).toUpperCase() + stage.slice(1)}`).style.display = 'block';
+            document.getElementById(`result${stage.charAt(0).toUpperCase() + stage.slice(1)}`).style.display = 'none';
+            document.getElementById(stage === 'entrance' ? 'btnSubmitEntrance' : 'btnSubmitExit').disabled = true;
+            document.getElementById(stage === 'entrance' ? 'btnAutoEntrance' : 'btnAutoExit').disabled = false;
+        }
+
+        // Capture Logic
+        function captureSingle(stage) {
+            if (!stream || images[stage].length >= requiredImages) return;
+
+            const canvas = document.createElement('canvas');
+            canvas.width = cameraPreview.videoWidth || 640;
+            canvas.height = cameraPreview.videoHeight || 480;
+            canvas.getContext('2d').drawImage(cameraPreview, 0, 0, canvas.width, canvas.height);
+
+            canvas.toBlob(blob => {
+                if (blob) {
+                    const url = URL.createObjectURL(blob);
+                    images[stage].push({ blob, url });
+                    updateGrid(stage);
+
+                    if (images[stage].length >= requiredImages) {
+                        document.getElementById(stage === 'entrance' ? 'btnSubmitEntrance' : 'btnSubmitExit').disabled = false;
+                        document.getElementById(stage === 'entrance' ? 'btnAutoEntrance' : 'btnAutoExit').disabled = true;
+                        showToast(`Captured 5 images for ${stage}. Ready to submit.`, 'success');
+                    }
+                }
+            }, 'image/jpeg', 0.9);
+        }
+
+        async function autoCapture(stage) {
+            if (isCapturing) { showToast('Camera is currently busy capturing.', 'warning'); return; }
+            if (!stream || images[stage].length >= requiredImages) return;
+
+            isCapturing = true;
+            countdown.style.display = 'block';
+
+            for (let i = images[stage].length; i < requiredImages; i++) {
+                countdown.textContent = `Capturing ${stage} ${i + 1}/5 in 2s...`;
+                await sleep(1000);
+                countdown.textContent = `Capturing ${stage} ${i + 1}/5 in 1s...`;
+                await sleep(800);
+                countdown.textContent = 'Snapshot!';
+                captureSingle(stage);
+                await sleep(500);
+            }
+
+            countdown.style.display = 'none';
+            isCapturing = false;
+        }
+
+        function updateGrid(stage) {
+            const grid = document.getElementById(stage === 'entrance' ? 'gridEntrance' : 'gridExit');
+            const progress = document.getElementById(stage === 'entrance' ? 'entranceProgress' : 'exitProgress');
+            grid.innerHTML = '';
+
+            images[stage].forEach((img, idx) => {
+                const div = document.createElement('div');
+                div.className = 'image-preview';
+                div.innerHTML = `<img src="${img.url}"><div style="position:absolute; top:2px; right:2px; background:rgba(0,0,0,0.7); color:#fff; border-radius:50%; width:20px; height:20px; font-size:12px; display:flex; align-items:center; justify-content:center;">${idx+1}</div>`;
+                grid.appendChild(div);
+            });
+            progress.textContent = `${images[stage].length} / 5`;
+        }
+
+        function blobToBase64(blob) {
+            return new Promise((res, rej) => {
+                const reader = new FileReader();
+                reader.onloadend = () => res(reader.result);
+                reader.onerror = rej;
+                reader.readAsDataURL(blob);
+            });
+        }
+
+        // Submissions & Result UI
+        function appendResultLog(imgUrl, text, timeStr, statusClass) {
+            const emptyState = document.getElementById('emptyLogState');
+            if (emptyState) emptyState.remove();
+
+            const row = document.createElement('div');
+            row.className = `result-row ${statusClass}`;
+
+            row.innerHTML = `
+                <div class="result-info">
+                    <img src="${imgUrl}" class="result-thumb" alt="Capture">
+                    <span>${text}</span>
+                </div>
+                <div class="result-time">${timeStr}</div>
+            `;
+            resultsLog.insertBefore(row, resultsLog.firstChild);
+            saveSessionState();
+        }
+
+        async function submitEntrance() {
+            if (images.entrance.length < requiredImages) return;
+            document.getElementById('btnSubmitEntrance').disabled = true;
+            showToast('Processing Entrance...', 'info');
+
+            const b64s = await Promise.all(images.entrance.map(i => blobToBase64(i.blob)));
+            const formData = new FormData();
+            formData.append('image_data[]', JSON.stringify(b64s));
+
+            const thumbUrl = images.entrance[images.entrance.length-1].url;
+
+            try {
+                const res = await fetch('/capture_entrance_auto', { method: 'POST', body: formData });
+                const data = await res.json();
+
+                const resBox = document.getElementById('resultEntrance');
+                const resImg = document.getElementById('imgResultEntrance');
+                const resText = document.getElementById('textResultEntrance');
+                const resTime = document.getElementById('timeResultEntrance');
+
+                document.getElementById('controlsEntrance').style.display = 'none';
+                resBox.style.display = 'flex';
+                resImg.src = thumbUrl;
+                resImg.style.display = 'block';
+
+                const timeStr = new Date().toLocaleTimeString();
+                resTime.textContent = timeStr;
+
+                if (data.success) {
+                    resBox.className = 'result-box safe';
+                    resText.innerHTML = `<span class="text-success">${data.result_text}</span>`;
+
+                    showToast('Entrance processed', 'success');
+
+                    const occEl = document.getElementById('seatOccupancy');
+                    if (occEl) occEl.textContent = `${data.active_count} / 54`;
+
+                    // Update stats & log
+                    stats.entered += 1;
+                    document.getElementById('statTotalEntered').textContent = stats.entered;
+
+                    appendResultLog(thumbUrl, data.result_text, timeStr, 'safe');
+                } else {
+                    resBox.className = 'result-box anomaly';
+                    resText.innerHTML = `<span class="text-danger">Boarding Failed: ${data.error}</span>`;
+                    appendResultLog(thumbUrl, `Boarding Failed: ${data.error}`, timeStr, 'anomaly');
+                    document.getElementById('btnSubmitEntrance').disabled = false;
+                }
+            } catch (err) {
+                showToast('Network error', 'error');
+                document.getElementById('btnSubmitEntrance').disabled = false;
+            }
+        }
+
+        async function submitExit() {
+            if (images.exit.length < requiredImages) return;
+            document.getElementById('btnSubmitExit').disabled = true;
+            showToast('Scanning database for match...', 'info');
+
+            const b64s = await Promise.all(images.exit.map(i => blobToBase64(i.blob)));
+            const formData = new FormData();
+            formData.append('image_data[]', JSON.stringify(b64s));
+
+            const thumbUrl = images.exit[images.exit.length-1].url;
+
+            try {
+                const res = await fetch('/capture_exit_auto', { method: 'POST', body: formData });
+                const data = await res.json();
+
+                const resBox = document.getElementById('resultExit');
+                const resImg = document.getElementById('imgResultExit');
+                const resText = document.getElementById('textResultExit');
+                const resTime = document.getElementById('timeResultExit');
+
+                document.getElementById('controlsExit').style.display = 'none';
+                resBox.style.display = 'flex';
+                resImg.src = thumbUrl;
+                resImg.style.display = 'block';
+
+                const timeStr = new Date().toLocaleTimeString();
+                resTime.textContent = timeStr;
+
+                if (!data.match_found) {
+                    resBox.className = 'result-box nomatch';
+                    resText.innerHTML = `<span class="text-warning">${data.result_text}</span>`;
+                    showToast('No match found in active journeys', 'warning');
+                    appendResultLog(thumbUrl, data.result_text, timeStr, 'warning');
+                } else {
+                    // Update stats
+                    stats.exited += 1;
+                    document.getElementById('statTotalExited').textContent = stats.exited;
+
+                    const occEl = document.getElementById('seatOccupancy');
+                    if (occEl && data.active_count !== undefined) occEl.textContent = `${data.active_count} / 54`;
+
+                    if (data.anomaly) {
+                        resBox.className = 'result-box anomaly';
+                        resText.innerHTML = `<span class="text-danger">${data.result_text}</span>`;
+                        stats.anomalies += 1;
+                        document.getElementById('statAnomalies').textContent = stats.anomalies;
+                        showToast('Anomaly Alert!', 'error');
+                        appendResultLog(thumbUrl, data.result_text, timeStr, 'anomaly');
+                    } else {
+                        resBox.className = 'result-box safe';
+                        resText.innerHTML = `<span class="text-success">${data.result_text}</span>`;
+                        showToast('Exit processed safely', 'success');
+                        appendResultLog(thumbUrl, data.result_text, timeStr, 'safe');
+                    }
+                }
+            } catch (err) {
+                showToast('Network error', 'error');
+                document.getElementById('btnSubmitExit').disabled = false;
+            }
+        }
+
+        // Utils
+        function showToast(msg, type) {
+            const t = document.createElement('div');
+            t.className = 'notification-toast';
+            t.style.background = type === 'success' ? '#10b981' : type === 'error' ? '#ef4444' : type === 'warning' ? '#f59e0b' : '#3b82f6';
+            t.innerHTML = `<span>${msg}</span>`;
+            document.body.appendChild(t);
+            setTimeout(() => t.remove(), 3000);
+        }
+        function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadSessionState();
+            startCamera();
+        });
+
+        window.addEventListener('beforeunload', () => {
+            if (stream) stream.getTracks().forEach(t => t.stop());
+        });
+    </script>
+</body>
+</html>

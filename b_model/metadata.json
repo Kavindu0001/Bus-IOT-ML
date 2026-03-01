@@ -1,0 +1,27 @@
+{
+  "model_type": "VGG16_Transfer_Learning",
+  "input_shape": [
+    2,
+    2,
+    512
+  ],
+  "output_shape": [
+    10
+  ],
+  "classes": [
+    "c0",
+    "c1",
+    "c2",
+    "c3",
+    "c4",
+    "c5",
+    "c6",
+    "c7",
+    "c8",
+    "c9"
+  ],
+  "training_samples": 17939,
+  "validation_samples": 4485,
+  "final_val_accuracy": 0.881605327129364,
+  "final_val_loss": 0.44389456510543823
+}

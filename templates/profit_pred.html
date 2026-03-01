@@ -1,0 +1,2081 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profit Assessment & Routing Optimization</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --success-color: #27ae60;
+            --warning-color: #f39c12;
+            --danger-color: #e74c3c;
+            --info-color: #17a2b8;
+            --light-color: #ecf0f1;
+            --dark-color: #2c3e50;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .navbar {
+            background: linear-gradient(90deg, var(--primary-color), #1a252f);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            margin-bottom: 20px;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+        }
+
+        .card-header {
+            background: linear-gradient(135deg, var(--secondary-color), #2980b9);
+            color: white;
+            border-radius: 15px 15px 0 0 !important;
+            padding: 1.2rem 1.5rem;
+            font-weight: 600;
+        }
+
+        .form-control, .form-select {
+            border-radius: 10px;
+            border: 1px solid #ddd;
+            padding: 0.75rem 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .form-control:focus, .form-select:focus {
+            border-color: var(--secondary-color);
+            box-shadow: 0 0 0 0.25rem rgba(52, 152, 219, 0.25);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--secondary-color), #2980b9);
+            border: none;
+            border-radius: 10px;
+            padding: 0.75rem 2rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(52, 152, 219, 0.4);
+        }
+
+        .stat-card {
+            text-align: center;
+            padding: 1.5rem;
+            border-radius: 15px;
+            background: white;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.08);
+        }
+
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .profit-positive {
+            color: var(--success-color);
+        }
+
+        .profit-negative {
+            color: var(--danger-color);
+        }
+
+        .risk-high {
+            color: var(--danger-color);
+            background: rgba(231, 76, 60, 0.1);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-weight: bold;
+        }
+
+        .risk-medium {
+            color: var(--warning-color);
+            background: rgba(243, 156, 18, 0.1);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-weight: bold;
+        }
+
+        .risk-low {
+            color: var(--success-color);
+            background: rgba(39, 174, 96, 0.1);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-weight: bold;
+        }
+
+        .recommendation-card {
+            border-left: 4px solid var(--secondary-color);
+            padding-left: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .priority-high {
+            border-left-color: var(--danger-color);
+        }
+
+        .priority-medium {
+            border-left-color: var(--warning-color);
+        }
+
+        .priority-low {
+            border-left-color: var(--success-color);
+        }
+
+        .loading-spinner {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.9);
+            z-index: 9999;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .route-card {
+            border-left: 4px solid;
+            padding-left: 1rem;
+            margin-bottom: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .route-card:hover {
+            transform: translateX(5px);
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+        }
+
+        .route-optimal {
+            border-left-color: var(--success-color);
+            background: rgba(39, 174, 96, 0.05);
+        }
+
+        .route-alternative {
+            border-left-color: var(--warning-color);
+            background: rgba(243, 156, 18, 0.05);
+        }
+
+        .route-avoid {
+            border-left-color: var(--danger-color);
+            background: rgba(231, 76, 60, 0.05);
+        }
+
+        .route-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+
+        .route-map {
+            height: 200px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            margin: 1rem 0;
+        }
+
+        .timeline-item {
+            position: relative;
+            padding-left: 30px;
+            margin-bottom: 1.5rem;
+        }
+
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            background: var(--secondary-color);
+        }
+
+        .timeline-item::after {
+            content: '';
+            position: absolute;
+            left: 7px;
+            top: 15px;
+            width: 1px;
+            height: calc(100% + 10px);
+            background: var(--secondary-color);
+        }
+
+        .timeline-item:last-child::after {
+            display: none;
+        }
+
+        .fuel-savings {
+            background: linear-gradient(135deg, #2ecc71, #27ae60);
+            color: white;
+            padding: 1rem;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .time-savings {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            padding: 1rem;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .cost-savings {
+            background: linear-gradient(135deg, #9b59b6, #8e44ad);
+            color: white;
+            padding: 1rem;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        @media (max-width: 768px) {
+            .stat-value {
+                font-size: 2rem;
+            }
+
+            .card {
+                margin-bottom: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-chart-line me-2"></i>Profit & Route Optimization
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/">
+                            <i class="fas fa-home me-1"></i>Home
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/dashboard">
+                            <i class="fas fa-tachometer-alt me-1"></i>Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/profit_assessment">
+                            <i class="fas fa-chart-bar me-1"></i>Profit & Routes
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/history">
+                            <i class="fas fa-history me-1"></i>History
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="loading-spinner" id="loadingSpinner">
+        <div class="text-center">
+            <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-3">Analyzing routes and profit data...</p>
+        </div>
+    </div>
+
+    <div class="container py-4">
+        <ul class="nav nav-pills mb-4" id="mainTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="profit-tab" data-bs-toggle="tab" data-bs-target="#profit-tab-pane" type="button">
+                    <i class="fas fa-calculator me-2"></i>Profit Analysis
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="routes-tab" data-bs-toggle="tab" data-bs-target="#routes-tab-pane" type="button">
+                    <i class="fas fa-route me-2"></i>Route Optimization
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="comparison-tab" data-bs-toggle="tab" data-bs-target="#comparison-tab-pane" type="button">
+                    <i class="fas fa-balance-scale me-2"></i>Route Comparison
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="schedule-tab" data-bs-toggle="tab" data-bs-target="#schedule-tab-pane" type="button">
+                    <i class="fas fa-calendar-alt me-2"></i>Scheduler
+                </button>
+            </li>
+        </ul>
+
+        <div class="tab-content" id="mainTabsContent">
+            <div class="tab-pane fade show active" id="profit-tab-pane" role="tabpanel">
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <h4 class="mb-0"><i class="fas fa-calculator me-2"></i>Profit Prediction & Analysis</h4>
+                            </div>
+                            <div class="card-body">
+                                <p class="mb-4">Enter your operational parameters to predict profit and get optimization recommendations.</p>
+
+                                <div class="row">
+                                    <div class="col-lg-6">
+                                        <div class="card mb-4">
+                                            <div class="card-header bg-info text-white">
+                                                <h5 class="mb-0"><i class="fas fa-edit me-2"></i>Input Parameters</h5>
+                                            </div>
+                                            <div class="card-body">
+                                                <form id="profitForm">
+                                                    <div class="row">
+                                                        <div class="col-md-6 mb-3">
+                                                            <label class="form-label">Daily Collection (LKR)</label>
+                                                            <div class="input-group">
+                                                                <span class="input-group-text">LKR</span>
+                                                                <input type="number" class="form-control" id="dailyCollection"
+                                                                       value="175000" min="10000" step="1000" required>
+                                                            </div>
+                                                            <small class="text-muted">Total daily ticket collection</small>
+                                                        </div>
+
+                                                        <div class="col-md-6 mb-3">
+                                                            <label class="form-label">Total Distance (km)</label>
+                                                            <div class="input-group">
+                                                                <input type="number" class="form-control" id="totalDistance"
+                                                                       value="400" min="10" step="10" required>
+                                                                <span class="input-group-text">km</span>
+                                                            </div>
+                                                            <small class="text-muted">Total daily travel distance</small>
+                                                        </div>
+
+                                                        <div class="col-md-6 mb-3">
+                                                            <label class="form-label">Fuel Cost (LKR/Liter)</label>
+                                                            <div class="input-group">
+                                                                <span class="input-group-text">LKR</span>
+                                                                <input type="number" class="form-control" id="fuelCost"
+                                                                       value="360.5" min="100" step="0.5" required>
+                                                            </div>
+                                                            <small class="text-muted">Current fuel price per liter</small>
+                                                        </div>
+
+                                                        <div class="col-md-6 mb-3">
+                                                            <label class="form-label">Number of Trips</label>
+                                                            <div class="input-group">
+                                                                <input type="number" class="form-control" id="tripsCount"
+                                                                       value="3" min="1" max="10" required>
+                                                                <span class="input-group-text">trips</span>
+                                                            </div>
+                                                            <small class="text-muted">Daily operational trips</small>
+                                                        </div>
+
+                                                        <div class="col-md-6 mb-3">
+                                                            <label class="form-label">Bus Age (Years)</label>
+                                                            <div class="input-group">
+                                                                <input type="number" class="form-control" id="busAge"
+                                                                       value="7" min="0" max="50" required>
+                                                                <span class="input-group-text">years</span>
+                                                            </div>
+                                                            <small class="text-muted">Age of the bus</small>
+                                                        </div>
+
+                                                        <div class="col-md-6 mb-3">
+                                                            <label class="form-label">Maintenance Cost (LKR)</label>
+                                                            <div class="input-group">
+                                                                <span class="input-group-text">LKR</span>
+                                                                <input type="number" class="form-control" id="maintenanceCost"
+                                                                       value="750" min="0" step="50" required>
+                                                            </div>
+                                                            <small class="text-muted">Daily maintenance cost</small>
+                                                        </div>
+
+                                                        <div class="col-md-6 mb-3">
+                                                            <label class="form-label">Driver Salary (LKR)</label>
+                                                            <div class="input-group">
+                                                                <span class="input-group-text">LKR</span>
+                                                                <input type="number" class="form-control" id="driverSalary"
+                                                                       value="2200" min="1000" step="100" required>
+                                                            </div>
+                                                            <small class="text-muted">Daily driver salary</small>
+                                                        </div>
+
+                                                        <div class="col-md-6 mb-3">
+                                                            <label class="form-label">Conductor Salary (LKR)</label>
+                                                            <div class="input-group">
+                                                                <span class="input-group-text">LKR</span>
+                                                                <input type="number" class="form-control" id="conductorSalary"
+                                                                       value="1650" min="1000" step="100" required>
+                                                            </div>
+                                                            <small class="text-muted">Daily conductor salary</small>
+                                                        </div>
+                                                    </div>
+
+                                                    <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
+                                                        <button type="button" class="btn btn-secondary me-2" onclick="loadSampleData()">
+                                                            <i class="fas fa-download me-2"></i>Load Sample Data
+                                                        </button>
+                                                        <button type="button" class="btn btn-primary" onclick="calculateProfit()">
+                                                            <i class="fas fa-calculator me-2"></i>Calculate Profit
+                                                        </button>
+                                                        <button type="button" class="btn btn-success" onclick="optimizeProfit()">
+                                                            <i class="fas fa-magic me-2"></i>Auto-Optimize
+                                                        </button>
+                                                        <button type="button" class="btn btn-warning" onclick="resetForm()">
+                                                            <i class="fas fa-redo me-2"></i>Reset Form
+                                                        </button>
+                                                    </div>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-lg-6">
+                                        <div class="row">
+                                            <div class="col-md-6 mb-3">
+                                                <div class="stat-card">
+                                                    <div class="stat-value profit-positive" id="predictedProfit">LKR 0</div>
+                                                    <div class="stat-label">Predicted Daily Profit</div>
+                                                </div>
+                                            </div>
+
+                                            <div class="col-md-6 mb-3">
+                                                <div class="stat-card">
+                                                    <div class="stat-value" id="profitMargin">0%</div>
+                                                    <div class="stat-label">Profit Margin</div>
+                                                </div>
+                                            </div>
+
+                                            <div class="col-md-6 mb-3">
+                                                <div class="stat-card">
+                                                    <div class="stat-value" id="revenuePerKm">LKR 0</div>
+                                                    <div class="stat-label">Revenue per Km</div>
+                                                </div>
+                                            </div>
+
+                                            <div class="col-md-6 mb-3">
+                                                <div class="stat-card">
+                                                    <div class="stat-value" id="riskLevel">-</div>
+                                                    <div class="stat-label">Risk Level</div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="card mb-4">
+                                            <div class="card-header">
+                                                <h5 class="mb-0"><i class="fas fa-chart-pie me-2"></i>Status Overview</h5>
+                                            </div>
+                                            <div class="card-body">
+                                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                                    <span>Profit Status:</span>
+                                                    <span class="badge bg-secondary" id="profitStatus">Not Calculated</span>
+                                                </div>
+
+                                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                                    <span>Recommendation Level:</span>
+                                                    <span class="badge bg-secondary" id="recommendationLevel">-</span>
+                                                </div>
+
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <span>Analysis Time:</span>
+                                                    <span id="analysisTime">-</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="card">
+                                            <div class="card-header">
+                                                <h5 class="mb-0"><i class="fas fa-bolt me-2"></i>Quick Actions</h5>
+                                            </div>
+                                            <div class="card-body">
+                                                <div class="d-grid gap-2">
+                                                    <button class="btn btn-outline-primary" onclick="showReport()">
+                                                        <i class="fas fa-file-alt me-2"></i>Generate Detailed Report
+                                                    </button>
+                                                    <button class="btn btn-outline-success" onclick="saveAnalysis()">
+                                                        <i class="fas fa-save me-2"></i>Save Analysis
+                                                    </button>
+                                                    <button class="btn btn-outline-info" onclick="compareScenarios()">
+                                                        <i class="fas fa-exchange-alt me-2"></i>Compare Scenarios
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row" id="resultsSection" style="display: none;">
+                    <div class="col-lg-4">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0"><i class="fas fa-money-bill-wave me-2"></i>Profit Breakdown</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label class="form-label">Daily Revenue</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">LKR</span>
+                                        <input type="text" class="form-control" id="dailyRevenue" readonly>
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Operational Costs</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">LKR</span>
+                                        <input type="text" class="form-control" id="operationalCosts" readonly>
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Fuel Cost</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">LKR</span>
+                                        <input type="text" class="form-control" id="fuelCostTotal" readonly>
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Labor Cost</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">LKR</span>
+                                        <input type="text" class="form-control" id="laborCost" readonly>
+                                    </div>
+                                </div>
+
+                                <div class="mb-4">
+                                    <label class="form-label">Net Daily Profit</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">LKR</span>
+                                        <input type="text" class="form-control" id="netProfit" readonly style="font-weight: bold;">
+                                    </div>
+                                </div>
+
+                                <div class="progress mb-2">
+                                    <div class="progress-bar bg-success" id="profitProgress" style="width: 0%"></div>
+                                </div>
+                                <small class="text-muted">Profit as percentage of revenue</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-lg-4">
+                        <div class="card h-100">
+                            <div class="card-header">
+                                <h5 class="mb-0"><i class="fas fa-lightbulb me-2"></i>Optimization Recommendations</h5>
+                            </div>
+                            <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                                <div id="recommendationsList">
+                                    <p class="text-muted">Complete analysis to see recommendations</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-lg-4">
+                        <div class="card h-100">
+                            <div class="card-header">
+                                <h5 class="mb-0"><i class="fas fa-exclamation-triangle me-2"></i>Risk Assessment</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="text-center mb-4">
+                                    <div class="risk-high" id="riskBadge">Not Assessed</div>
+                                    <div class="mt-2" id="riskScore">Score: 0/100</div>
+                                </div>
+
+                                <h6>Risk Factors:</h6>
+                                <ul class="list-group list-group-flush mb-3" id="riskFactors">
+                                    <li class="list-group-item">No risks identified yet</li>
+                                </ul>
+
+                                <h6>Mitigation Actions:</h6>
+                                <div id="mitigationActions">
+                                    <p class="text-muted">Complete analysis to see mitigation actions</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mt-4" id="temporalSection" style="display: none;">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0"><i class="fas fa-calendar-alt me-2"></i>Projected Profit Timeline</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row text-center" id="temporalPredictions">
+                                    </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-pane fade" id="routes-tab-pane" role="tabpanel">
+                <div class="row">
+                    <div class="col-lg-4">
+                        <div class="card">
+                            <div class="card-header bg-success text-white">
+                                <h5 class="mb-0"><i class="fas fa-route me-2"></i>Route Optimization</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label class="form-label">Current Daily Distance (km)</label>
+                                    <div class="input-group">
+                                        <input type="number" class="form-control" id="currentDistance"
+                                               value="400" min="10" step="10" required>
+                                        <span class="input-group-text">km</span>
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Current Fuel Consumption (km/L)</label>
+                                    <div class="input-group">
+                                        <input type="number" class="form-control" id="fuelEfficiency"
+                                               value="3.5" min="2" max="10" step="0.1" required>
+                                        <span class="input-group-text">km/L</span>
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Traffic Conditions</label>
+                                    <select class="form-select" id="trafficConditions">
+                                        <option value="normal">Normal Traffic</option>
+                                        <option value="heavy">Heavy Traffic (-20% efficiency)</option>
+                                        <option value="light">Light Traffic (+10% efficiency)</option>
+                                        <option value="rush_hour">Rush Hour (-30% efficiency)</option>
+                                    </select>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Route Type</label>
+                                    <select class="form-select" id="routeType">
+                                        <option value="highway">Highway/Main Road</option>
+                                        <option value="city">City Roads</option>
+                                        <option value="mixed">Mixed Routes</option>
+                                        <option value="hilly">Hilly Terrain</option>
+                                    </select>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Optimization Goal</label>
+                                    <select class="form-select" id="optimizationGoal">
+                                        <option value="fuel">Minimize Fuel Consumption</option>
+                                        <option value="time">Minimize Travel Time</option>
+                                        <option value="cost">Minimize Total Cost</option>
+                                        <option value="balanced">Balanced Optimization</option>
+                                    </select>
+                                </div>
+
+                                <div class="d-grid gap-2">
+                                    <button class="btn btn-primary" onclick="optimizeRoute()">
+                                        <i class="fas fa-search me-2"></i>Optimize Route
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card mt-3">
+                            <div class="card-header">
+                                <h5 class="mb-0"><i class="fas fa-tachometer-alt me-2"></i>Current Performance</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row text-center">
+                                    <div class="col-6">
+                                        <div class="fuel-savings">
+                                            <h6 class="mb-1">Daily Fuel</h6>
+                                            <div class="stat-value" style="font-size: 1.5rem;" id="currentFuel">114L</div>
+                                            <small>@ 3.5 km/L</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="time-savings">
+                                            <h6 class="mb-1">Travel Time</h6>
+                                            <div class="stat-value" style="font-size: 1.5rem;" id="currentTime">8.5h</div>
+                                            <small>@ 47 km/h</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-lg-8">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0"><i class="fas fa-map-marked-alt me-2"></i>Route Optimization Results</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="route-map">
+                                    <div class="text-center">
+                                        <i class="fas fa-route fa-3x mb-3"></i>
+                                        <h5>Route Optimization Analysis</h5>
+                                        <p>Optimizing for <span id="goalText">Minimize Fuel Consumption</span></p>
+                                    </div>
+                                </div>
+
+                                <h5 class="mt-4">Optimization Suggestions</h5>
+                                <div id="optimizationResults">
+                                    <div class="alert alert-info">
+                                        <i class="fas fa-info-circle me-2"></i>
+                                        Enter parameters and click "Optimize Route" to see suggestions
+                                    </div>
+                                </div>
+
+                                <div class="row mt-4" id="optimizationBenefits" style="display: none;">
+                                    <div class="col-md-4">
+                                        <div class="fuel-savings">
+                                            <h6><i class="fas fa-gas-pump me-2"></i>Fuel Savings</h6>
+                                            <div class="stat-value" style="font-size: 1.8rem;" id="fuelSavings">0%</div>
+                                            <small>Compared to current route</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="time-savings">
+                                            <h6><i class="fas fa-clock me-2"></i>Time Savings</h6>
+                                            <div class="stat-value" style="font-size: 1.8rem;" id="timeSavings">0%</div>
+                                            <small>Faster than current route</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="cost-savings">
+                                            <h6><i class="fas fa-money-bill-wave me-2"></i>Cost Savings</h6>
+                                            <div class="stat-value" style="font-size: 1.8rem;" id="costSavings">LKR 0</div>
+                                            <small>Daily operational savings</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card mt-3">
+                            <div class="card-header">
+                                <h5 class="mb-0"><i class="fas fa-chart-line me-2"></i>Route Performance Analysis</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <h6>Optimized Route Metrics</h6>
+                                        <table class="table table-sm" id="routeMetrics">
+                                            <tr>
+                                                <td>Distance:</td>
+                                                <td class="text-end"><strong>-</strong></td>
+                                            </tr>
+                                            <tr>
+                                                <td>Travel Time:</td>
+                                                <td class="text-end"><strong>-</strong></td>
+                                            </tr>
+                                            <tr>
+                                                <td>Fuel Consumption:</td>
+                                                <td class="text-end"><strong>-</strong></td>
+                                            </tr>
+                                            <tr>
+                                                <td>Fuel Cost:</td>
+                                                <td class="text-end"><strong>-</strong></td>
+                                            </tr>
+                                            <tr>
+                                                <td>Daily Savings:</td>
+                                                <td class="text-end"><strong>-</strong></td>
+                                            </tr>
+                                            <tr>
+                                                <td>Monthly Savings:</td>
+                                                <td class="text-end"><strong>-</strong></td>
+                                            </tr>
+                                        </table>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <h6>Performance Improvement</h6>
+                                        <div class="mb-3">
+                                            <label>Fuel Efficiency Improvement: <span id="fuelEfficiencyLabel">-</span></label>
+                                            <div class="progress">
+                                                <div class="progress-bar bg-success" id="fuelProgress" style="width: 0%"></div>
+                                            </div>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label>Time Efficiency Improvement: <span id="timeEfficiencyLabel">-</span></label>
+                                            <div class="progress">
+                                                <div class="progress-bar bg-warning" id="timeProgress" style="width: 0%"></div>
+                                            </div>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label>Cost Efficiency Improvement: <span id="costEfficiencyLabel">-</span></label>
+                                            <div class="progress">
+                                                <div class="progress-bar bg-info" id="costProgress" style="width: 0%"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-3">
+                                    <button class="btn btn-success" onclick="applyRouteOptimization()">
+                                        <i class="fas fa-check-circle me-2"></i>Apply Optimized Route
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-pane fade" id="comparison-tab-pane" role="tabpanel">
+                <div class="row">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0"><i class="fas fa-balance-scale me-2"></i>Scenario Comparison</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row" id="scenarioComparison">
+                                    </div>
+
+                                <div class="card mt-3">
+                                    <div class="card-header bg-success text-white">
+                                        <h5 class="mb-0"><i class="fas fa-check-circle me-2"></i>Optimal Scenario</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row align-items-center">
+                                            <div class="col-md-3 text-center">
+                                                <div class="p-3 bg-success rounded text-white">
+                                                    <h3><i class="fas fa-crown"></i></h3>
+                                                    <h4>Scenario A</h4>
+                                                    <div class="badge bg-white text-success">OPTIMAL</div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-9">
+                                                <h5 id="optimalScenarioTitle">Optimized Balanced Route</h5>
+                                                <p class="mb-2" id="optimalScenarioDesc">This scenario offers the best balance of time efficiency, fuel economy, and operational cost savings.</p>
+                                                <div class="row">
+                                                    <div class="col-4">
+                                                        <small class="text-muted">Profit Improvement</small>
+                                                        <h6 class="text-success" id="optimalProfit">+15%</h6>
+                                                    </div>
+                                                    <div class="col-4">
+                                                        <small class="text-muted">Fuel Savings</small>
+                                                        <h6 class="text-success" id="optimalFuel">+12%</h6>
+                                                    </div>
+                                                    <div class="col-4">
+                                                        <small class="text-muted">Time Savings</small>
+                                                        <h6 class="text-success" id="optimalTime">+18%</h6>
+                                                    </div>
+                                                </div>
+                                                <button class="btn btn-success mt-3" onclick="applyOptimalScenario()">
+                                                    <i class="fas fa-check me-2"></i>Apply This Scenario
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-pane fade" id="schedule-tab-pane" role="tabpanel">
+                <div class="row">
+                    <div class="col-lg-4">
+                        <div class="card">
+                            <div class="card-header bg-primary text-white">
+                                <h5 class="mb-0"><i class="fas fa-calendar-plus me-2"></i>Schedule Assessment</h5>
+                            </div>
+                            <div class="card-body">
+                                <form id="assessmentScheduleForm" onsubmit="scheduleAssessment(event)">
+                                    <div class="mb-3">
+                                        <label class="form-label">Bus ID / Registration</label>
+                                        <input type="text" class="form-control" id="schedBusId" placeholder="e.g., NA-1234" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Route</label>
+                                        <select class="form-select" id="schedRoute" required>
+                                            <option value="" disabled selected>Select a route</option>
+                                            <option value="Route 01 (City)">Route 01 (City Center)</option>
+                                            <option value="Route 02 (Highway)">Route 02 (Intercity Highway)</option>
+                                            <option value="Route 03 (Suburbs)">Route 03 (Suburban)</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Assessment Type</label>
+                                        <select class="form-select" id="schedType" required>
+                                            <option value="Profit Analysis">Profit Analysis</option>
+                                            <option value="Route Optimization">Route Optimization</option>
+                                            <option value="Comprehensive (Both)">Comprehensive (Both)</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Date</label>
+                                        <input type="date" class="form-control" id="schedDate" required>
+                                    </div>
+                                    <div class="mb-4">
+                                        <label class="form-label">Time</label>
+                                        <input type="time" class="form-control" id="schedTime" required>
+                                    </div>
+                                    <div class="d-grid">
+                                        <button type="submit" class="btn btn-primary">
+                                            <i class="fas fa-save me-2"></i>Save Schedule
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-lg-8">
+                        <div class="card">
+                            <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0"><i class="fas fa-list-alt me-2"></i>Upcoming Assessments Timetable</h5>
+                            </div>
+                            <div class="card-body p-0">
+                                <div class="table-responsive">
+                                    <table class="table table-hover align-middle mb-0" id="scheduleTable">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th scope="col" class="ps-4">Date & Time</th>
+                                                <th scope="col">Bus ID</th>
+                                                <th scope="col">Route</th>
+                                                <th scope="col">Type</th>
+                                                <th scope="col">Status</th>
+                                                <th scope="col" class="text-end pe-4">Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="scheduleTableBody">
+                                            <tr>
+                                                <td class="ps-4">
+                                                    <strong>Tomorrow</strong><br>
+                                                    <small class="text-muted">08:00 AM</small>
+                                                </td>
+                                                <td>NA-1234</td>
+                                                <td>Route 01 (City)</td>
+                                                <td>Profit Analysis</td>
+                                                <td><span class="badge bg-warning text-dark">Pending</span></td>
+                                                <td class="text-end pe-4">
+                                                    <button class="btn btn-sm btn-outline-success" onclick="this.closest('tr').remove(); showNotification('Assessment marked as complete.', 'success');"><i class="fas fa-check"></i></button>
+                                                    <button class="btn btn-sm btn-outline-danger" onclick="this.closest('tr').remove(); showNotification('Schedule removed.', 'info');"><i class="fas fa-times"></i></button>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td class="ps-4">
+                                                    <strong>15 Nov 2024</strong><br>
+                                                    <small class="text-muted">10:30 AM</small>
+                                                </td>
+                                                <td>ND-5566</td>
+                                                <td>Route 02 (Highway)</td>
+                                                <td>Route Optimization</td>
+                                                <td><span class="badge bg-info">Scheduled</span></td>
+                                                <td class="text-end pe-4">
+                                                    <button class="btn btn-sm btn-outline-success" onclick="this.closest('tr').remove(); showNotification('Assessment marked as complete.', 'success');"><i class="fas fa-check"></i></button>
+                                                    <button class="btn btn-sm btn-outline-danger" onclick="this.closest('tr').remove(); showNotification('Schedule removed.', 'info');"><i class="fas fa-times"></i></button>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        let currentAnalysis = null;
+        let currentOptimization = null;
+        let scenarioData = [];
+
+        // Tab switching function
+        function switchTab(tabName) {
+            const tab = document.querySelector(`[data-bs-target="#${tabName}"]`);
+            if (tab) {
+                bootstrap.Tab.getOrCreateInstance(tab).show();
+            }
+        }
+
+        function showLoading(show) {
+            document.getElementById('loadingSpinner').style.display = show ? 'flex' : 'none';
+        }
+
+        // Profit Analysis Functions
+        async function calculateProfit() {
+            showLoading(true);
+
+            const inputData = {
+                daily_collection: parseFloat(document.getElementById('dailyCollection').value),
+                total_distance: parseFloat(document.getElementById('totalDistance').value),
+                fuel_cost_per_l: parseFloat(document.getElementById('fuelCost').value),
+                trips_count: parseInt(document.getElementById('tripsCount').value),
+                bus_age_years: parseInt(document.getElementById('busAge').value),
+                maintenance_cost: parseFloat(document.getElementById('maintenanceCost').value),
+                driver_salary: parseFloat(document.getElementById('driverSalary').value),
+                conductor_salary: parseFloat(document.getElementById('conductorSalary').value)
+            };
+
+            try {
+                // Call backend profit assessment API
+                const response = await fetch('/api/assess_profit', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(inputData)
+                });
+
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+
+                const result = await response.json();
+                displayResults(result);
+            } catch (error) {
+                console.error('Error:', error);
+                // Fallback to simulated calculation
+                const simulatedResult = simulateProfitCalculation(inputData);
+                displayResults(simulatedResult);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        function simulateProfitCalculation(inputData) {
+            // This is a fallback simulation if backend is not available
+            const dailyCollection = inputData.daily_collection;
+            const totalDistance = inputData.total_distance;
+            const fuelCostPerL = inputData.fuel_cost_per_l;
+
+            const fuelConsumption = totalDistance / 3.5;
+            const fuelCostTotal = fuelConsumption * fuelCostPerL;
+            const laborCost = inputData.driver_salary + inputData.conductor_salary;
+            const operationalCost = fuelCostTotal + inputData.maintenance_cost + laborCost;
+            const profit = dailyCollection - operationalCost;
+            const profitMargin = (profit / dailyCollection) * 100;
+            const revenuePerKm = dailyCollection / totalDistance;
+
+            // Determine profit status
+            let profitStatus, statusColor, statusIcon, recommendationLevel;
+            if (profit >= 50000) {
+                profitStatus = "Highly Profitable";
+                statusColor = "success";
+                recommendationLevel = "EXCELLENT";
+            } else if (profit >= 0) {
+                profitStatus = "Profitable";
+                statusColor = "success";
+                recommendationLevel = "GOOD";
+            } else {
+                profitStatus = "Loss Making";
+                statusColor = "danger";
+                recommendationLevel = "NEEDS IMPROVEMENT";
+            }
+
+            // Risk assessment simulation
+            let riskScore = 0;
+            const riskFactors = [];
+
+            if (fuelCostPerL > 370) {
+                riskScore += 30;
+                riskFactors.push("High fuel costs");
+            }
+            if (inputData.bus_age_years > 10) {
+                riskScore += 25;
+                riskFactors.push("Aging vehicle");
+            }
+            if (totalDistance > 350) {
+                riskScore += 20;
+                riskFactors.push("Long-distance operations");
+            }
+            if (profit < 0) {
+                riskScore += 30;
+                riskFactors.push("Operating at loss");
+            }
+
+            let riskLevel, riskColor;
+            if (riskScore >= 70) {
+                riskLevel = "HIGH";
+                riskColor = "danger";
+            } else if (riskScore >= 40) {
+                riskLevel = "MEDIUM";
+                riskColor = "warning";
+            } else {
+                riskLevel = "LOW";
+                riskColor = "success";
+            }
+
+            // Recommendations simulation
+            const recommendations = [];
+            if (profit < 0) {
+                recommendations.push({
+                    priority: 'HIGH',
+                    title: 'Reduce Operational Costs',
+                    description: 'Current operations are loss-making. Consider optimizing fuel consumption and reducing maintenance costs.',
+                    action: 'Review fuel efficiency and negotiate maintenance contracts'
+                });
+            }
+
+            if (fuelCostPerL > 350) {
+                recommendations.push({
+                    priority: 'MEDIUM',
+                    title: 'Optimize Fuel Costs',
+                    description: `Fuel cost (LKR ${fuelCostPerL}/liter) is above optimal range.`,
+                    action: 'Consider bulk purchasing or alternative fuel stations'
+                });
+            }
+
+            if (inputData.bus_age_years > 10) {
+                recommendations.push({
+                    priority: 'MEDIUM',
+                    title: 'Vehicle Maintenance',
+                    description: `Bus age (${inputData.bus_age_years} years) may be affecting operational efficiency.`,
+                    action: 'Schedule comprehensive maintenance check'
+                });
+            }
+
+            if (totalDistance > 300) {
+                recommendations.push({
+                    priority: 'LOW',
+                    title: 'Route Optimization',
+                    description: 'Long-distance operations detected. Could benefit from route optimization.',
+                    action: 'Analyze route efficiency and consider route balancing'
+                });
+            }
+
+            // Temporal predictions simulation
+            const periods = ['daily', 'weekly', 'monthly', 'quarterly', 'annually'];
+            const temporalPredictions = {};
+            periods.forEach(period => {
+                const multipliers = {
+                    'daily': 1,
+                    'weekly': 7,
+                    'monthly': 30,
+                    'quarterly': 90,
+                    'annually': 365
+                };
+                const baseProfit = profit * multipliers[period];
+                const projected = profit < 0 ? baseProfit : baseProfit * 1.05;
+
+                temporalPredictions[period] = {
+                    base: baseProfit,
+                    projected: projected,
+                    period_name: period.charAt(0).toUpperCase() + period.slice(1)
+                };
+            });
+
+            return {
+                profit: profit,
+                profit_status: profitStatus,
+                status_color: statusColor,
+                recommendation_level: recommendationLevel,
+                key_metrics: {
+                    revenue_per_km: revenuePerKm,
+                    profit_margin: profitMargin,
+                    daily_collection: dailyCollection,
+                    total_distance: totalDistance,
+                    fuel_cost_total: fuelCostTotal,
+                    labor_cost: laborCost,
+                    operational_cost: operationalCost
+                },
+                recommendations: recommendations,
+                risk_assessment: {
+                    risk_level: riskLevel,
+                    risk_score: riskScore,
+                    risk_factors: riskFactors,
+                    color: riskColor
+                },
+                temporal_predictions: temporalPredictions,
+                generated_at: new Date().toISOString()
+            };
+        }
+
+        function displayResults(data) {
+            currentAnalysis = data;
+
+            // Update quick stats
+            const profitFormatted = formatCurrency(data.profit);
+            document.getElementById('predictedProfit').textContent = profitFormatted;
+            document.getElementById('predictedProfit').className = `stat-value ${data.profit >= 0 ? 'profit-positive' : 'profit-negative'}`;
+
+            document.getElementById('profitMargin').textContent = `${data.key_metrics.profit_margin.toFixed(1)}%`;
+            document.getElementById('revenuePerKm').textContent = formatCurrency(data.key_metrics.revenue_per_km);
+
+            // Update status card
+            document.getElementById('profitStatus').textContent = data.profit_status;
+            document.getElementById('profitStatus').className = `badge bg-${data.status_color}`;
+            document.getElementById('recommendationLevel').textContent = data.recommendation_level;
+            document.getElementById('analysisTime').textContent = new Date().toLocaleTimeString();
+
+            // Update risk level
+            const riskElement = document.getElementById('riskLevel');
+            riskElement.textContent = data.risk_assessment.risk_level;
+            riskElement.className = `stat-value risk-${data.risk_assessment.risk_level.toLowerCase()}`;
+
+            // Show results section
+            document.getElementById('resultsSection').style.display = 'flex';
+            document.getElementById('temporalSection').style.display = 'block';
+
+            // Update profit breakdown
+            document.getElementById('dailyRevenue').value = formatCurrency(data.key_metrics.daily_collection);
+            document.getElementById('operationalCosts').value = formatCurrency(data.key_metrics.operational_cost);
+            document.getElementById('fuelCostTotal').value = formatCurrency(data.key_metrics.fuel_cost_total);
+            document.getElementById('laborCost').value = formatCurrency(data.key_metrics.labor_cost);
+            document.getElementById('netProfit').value = profitFormatted;
+
+            // Update profit progress bar
+            const profitPercentage = Math.min(Math.max((data.profit / data.key_metrics.daily_collection) * 100, 0), 100);
+            document.getElementById('profitProgress').style.width = `${profitPercentage}%`;
+
+            // Display recommendations
+            const recommendationsList = document.getElementById('recommendationsList');
+            recommendationsList.innerHTML = '';
+
+            if (data.recommendations.length === 0) {
+                recommendationsList.innerHTML = '<p class="text-success"><i class="fas fa-check-circle me-2"></i>All operations are optimal. No recommendations needed.</p>';
+            } else {
+                data.recommendations.forEach(rec => {
+                    const recDiv = document.createElement('div');
+                    recDiv.className = `recommendation-card priority-${rec.priority.toLowerCase()}`;
+                    recDiv.innerHTML = `
+                        <h6><i class="fas fa-lightbulb me-2"></i>${rec.title}</h6>
+                        <p class="mb-1">${rec.description}</p>
+                        <small class="text-muted"><strong>Action:</strong> ${rec.action}</small>
+                        <div class="mt-2">
+                            <span class="badge bg-${rec.priority === 'HIGH' ? 'danger' : rec.priority === 'MEDIUM' ? 'warning' : 'success'}">
+                                ${rec.priority} PRIORITY
+                            </span>
+                        </div>
+                    `;
+                    recommendationsList.appendChild(recDiv);
+                });
+            }
+
+            // Update risk assessment
+            const riskFactorsList = document.getElementById('riskFactors');
+            riskFactorsList.innerHTML = '';
+
+            if (data.risk_assessment.risk_factors.length === 0) {
+                riskFactorsList.innerHTML = '<li class="list-group-item text-success">No significant risks identified</li>';
+            } else {
+                data.risk_assessment.risk_factors.forEach(factor => {
+                    const li = document.createElement('li');
+                    li.className = 'list-group-item';
+                    li.textContent = factor;
+                    riskFactorsList.appendChild(li);
+                });
+            }
+
+            document.getElementById('riskBadge').textContent = data.risk_assessment.risk_level;
+            document.getElementById('riskBadge').className = `risk-${data.risk_assessment.risk_level.toLowerCase()}`;
+            document.getElementById('riskScore').textContent = `Score: ${data.risk_assessment.risk_score}/100`;
+
+            // Update mitigation actions
+            const mitigationDiv = document.getElementById('mitigationActions');
+            if (data.risk_assessment.risk_score > 50) {
+                mitigationDiv.innerHTML = `
+                    <p><i class="fas fa-exclamation-triangle me-2 text-danger"></i>Immediate action required:</p>
+                    <ul>
+                        <li>Review and reduce fuel consumption</li>
+                        <li>Optimize maintenance schedule</li>
+                        <li>Consider route adjustments</li>
+                        <li>Monitor daily performance metrics</li>
+                    </ul>
+                `;
+            } else if (data.risk_assessment.risk_score > 30) {
+                mitigationDiv.innerHTML = `
+                    <p><i class="fas fa-exclamation-circle me-2 text-warning"></i>Recommended actions:</p>
+                    <ul>
+                        <li>Monitor fuel prices regularly</li>
+                        <li>Regular vehicle maintenance</li>
+                        <li>Optimize passenger capacity</li>
+                    </ul>
+                `;
+            } else {
+                mitigationDiv.innerHTML = '<p class="text-success"><i class="fas fa-check-circle me-2"></i>Current risk level is acceptable. Continue monitoring.</p>';
+            }
+
+            // Display temporal predictions
+            const temporalDiv = document.getElementById('temporalPredictions');
+            temporalDiv.innerHTML = '';
+
+            for (const [period, prediction] of Object.entries(data.temporal_predictions)) {
+                const colDiv = document.createElement('div');
+                colDiv.className = 'col-md';
+                colDiv.innerHTML = `
+                    <div class="stat-card">
+                        <div class="stat-value ${prediction.base >= 0 ? 'profit-positive' : 'profit-negative'}">
+                            ${formatCurrency(prediction.projected)}
+                        </div>
+                        <div class="stat-label">${prediction.period_name} Profit</div>
+                        <small class="text-muted">Projected</small>
+                    </div>
+                `;
+                temporalDiv.appendChild(colDiv);
+            }
+
+            // Scroll to results
+            document.getElementById('resultsSection').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function optimizeProfit() {
+            if (!currentAnalysis) {
+                showNotification('Please calculate profit first.', 'warning');
+                return;
+            }
+
+            // Apply optimization suggestions
+            if (currentAnalysis.profit < 0) {
+                // If losing money, suggest improvements
+                document.getElementById('totalDistance').value = Math.max(0, parseFloat(document.getElementById('totalDistance').value) * 0.9);
+                document.getElementById('fuelCost').value = Math.max(0, parseFloat(document.getElementById('fuelCost').value) * 0.95);
+                document.getElementById('maintenanceCost').value = Math.max(0, parseFloat(document.getElementById('maintenanceCost').value) * 0.9);
+
+                showNotification('Optimized parameters applied. Click "Calculate Profit" to see new results.', 'success');
+            } else {
+                // If profitable, suggest revenue increase
+                document.getElementById('dailyCollection').value = parseFloat(document.getElementById('dailyCollection').value) * 1.1;
+                showNotification('Optimized for increased revenue. Click "Calculate Profit" to see new results.', 'success');
+            }
+        }
+
+        function loadSampleData() {
+            document.getElementById('dailyCollection').value = 195000;
+            document.getElementById('totalDistance').value = 320;
+            document.getElementById('fuelCost').value = 340;
+            document.getElementById('tripsCount').value = 4;
+            document.getElementById('busAge').value = 5;
+            document.getElementById('maintenanceCost').value = 450;
+            document.getElementById('driverSalary').value = 2000;
+            document.getElementById('conductorSalary').value = 1500;
+
+            showNotification('Sample profitable data loaded. Click "Calculate Profit" to analyze.', 'info');
+        }
+
+        function resetForm() {
+            document.getElementById('profitForm').reset();
+            document.getElementById('dailyCollection').value = 175000;
+            document.getElementById('totalDistance').value = 400;
+            document.getElementById('fuelCost').value = 360.5;
+            document.getElementById('tripsCount').value = 3;
+            document.getElementById('busAge').value = 7;
+            document.getElementById('maintenanceCost').value = 750;
+            document.getElementById('driverSalary').value = 2200;
+            document.getElementById('conductorSalary').value = 1650;
+
+            document.getElementById('resultsSection').style.display = 'none';
+            document.getElementById('temporalSection').style.display = 'none';
+
+            resetStats();
+
+            showNotification('Form reset to default values.', 'info');
+        }
+
+        function resetStats() {
+            document.getElementById('predictedProfit').textContent = 'LKR 0';
+            document.getElementById('predictedProfit').className = 'stat-value';
+            document.getElementById('profitMargin').textContent = '0%';
+            document.getElementById('revenuePerKm').textContent = 'LKR 0';
+            document.getElementById('riskLevel').textContent = '-';
+            document.getElementById('riskLevel').className = 'stat-value';
+            document.getElementById('profitStatus').textContent = 'Not Calculated';
+            document.getElementById('profitStatus').className = 'badge bg-secondary';
+            document.getElementById('recommendationLevel').textContent = '-';
+            document.getElementById('analysisTime').textContent = '-';
+        }
+
+        // Route Optimization Functions
+        function optimizeRoute() {
+            showLoading(true);
+
+            const currentDistance = parseFloat(document.getElementById('currentDistance').value);
+            const fuelEfficiency = parseFloat(document.getElementById('fuelEfficiency').value);
+            const traffic = document.getElementById('trafficConditions').value;
+            const routeType = document.getElementById('routeType').value;
+            const goal = document.getElementById('optimizationGoal').value;
+
+            // Update goal text
+            document.getElementById('goalText').textContent = goal === 'fuel' ? 'Minimize Fuel Consumption' :
+                                                              goal === 'time' ? 'Minimize Travel Time' :
+                                                              goal === 'cost' ? 'Minimize Total Cost' : 'Balanced Optimization';
+
+            // Calculate current metrics
+            const currentFuel = currentDistance / fuelEfficiency;
+            const currentTime = currentDistance / 47; // Assume average speed 47 km/h
+
+            // Apply traffic factor
+            let trafficFactor = 1.0;
+            switch(traffic) {
+                case 'heavy': trafficFactor = 0.8; break;
+                case 'light': trafficFactor = 1.1; break;
+                case 'rush_hour': trafficFactor = 0.7; break;
+            }
+
+            // Apply route type factor
+            let routeFactor = 1.0;
+            switch(routeType) {
+                case 'city': routeFactor = 0.9; break;
+                case 'mixed': routeFactor = 1.0; break;
+                case 'hilly': routeFactor = 0.85; break;
+            }
+
+            // Calculate optimized metrics based on goal
+            let optimizedDistance, optimizedEfficiency, optimizedTime, fuelSavings, timeSavings, costSavings;
+
+            switch(goal) {
+                case 'fuel':
+                    optimizedDistance = currentDistance * 0.85;
+                    optimizedEfficiency = fuelEfficiency * 1.15;
+                    optimizedTime = optimizedDistance / 45;
+                    fuelSavings = 15;
+                    timeSavings = 10;
+                    costSavings = 12;
+                    break;
+                case 'time':
+                    optimizedDistance = currentDistance * 0.95;
+                    optimizedEfficiency = fuelEfficiency * 1.05;
+                    optimizedTime = optimizedDistance / 55;
+                    fuelSavings = 5;
+                    timeSavings = 25;
+                    costSavings = 8;
+                    break;
+                case 'cost':
+                    optimizedDistance = currentDistance * 0.8;
+                    optimizedEfficiency = fuelEfficiency * 1.2;
+                    optimizedTime = optimizedDistance / 40;
+                    fuelSavings = 20;
+                    timeSavings = 5;
+                    costSavings = 18;
+                    break;
+                case 'balanced':
+                    optimizedDistance = currentDistance * 0.9;
+                    optimizedEfficiency = fuelEfficiency * 1.1;
+                    optimizedTime = optimizedDistance / 50;
+                    fuelSavings = 12;
+                    timeSavings = 18;
+                    costSavings = 15;
+                    break;
+            }
+
+            // Apply traffic and route factors
+            optimizedEfficiency *= trafficFactor;
+            optimizedEfficiency *= routeFactor;
+            optimizedTime /= trafficFactor;
+
+            const optimizedFuel = optimizedDistance / optimizedEfficiency;
+            const fuelCostPerL = parseFloat(document.getElementById('fuelCost').value);
+            const dailySavings = (currentFuel - optimizedFuel) * fuelCostPerL;
+
+            // Store optimization data
+            currentOptimization = {
+                current: {
+                    distance: currentDistance,
+                    fuel: currentFuel,
+                    time: currentTime,
+                    efficiency: fuelEfficiency
+                },
+                optimized: {
+                    distance: optimizedDistance,
+                    fuel: optimizedFuel,
+                    time: optimizedTime,
+                    efficiency: optimizedEfficiency,
+                    fuelSavings: fuelSavings,
+                    timeSavings: timeSavings,
+                    costSavings: costSavings,
+                    dailySavings: dailySavings
+                },
+                goal: goal,
+                generated_at: new Date().toISOString()
+            };
+
+            // Simulate calculation delay
+            setTimeout(() => {
+                displayRouteOptimization(currentOptimization);
+                showLoading(false);
+                generateScenarios();
+                showNotification('Route optimization complete!', 'success');
+            }, 1500);
+        }
+
+        function displayRouteOptimization(data) {
+            // Update current performance
+            document.getElementById('currentFuel').textContent = `${Math.round(data.current.fuel)}L`;
+            document.getElementById('currentTime').textContent = `${data.current.time.toFixed(1)}h`;
+
+            // Display optimization suggestions
+            const resultsDiv = document.getElementById('optimizationResults');
+            resultsDiv.innerHTML = '';
+
+            const suggestions = [];
+
+            if (data.goal === 'fuel' || data.goal === 'balanced') {
+                suggestions.push({
+                    icon: 'fa-gas-pump',
+                    title: 'Reduce Distance',
+                    description: `Optimized route reduces distance by ${Math.round((1 - data.optimized.distance/data.current.distance)*100)}%`,
+                    impact: `Saves ${Math.round(data.current.fuel - data.optimized.fuel)} liters daily`
+                });
+            }
+
+            if (data.goal === 'time' || data.goal === 'balanced') {
+                suggestions.push({
+                    icon: 'fa-clock',
+                    title: 'Optimize Speed',
+                    description: 'Adjusted route for better traffic flow and higher average speed',
+                    impact: `Saves ${(data.current.time - data.optimized.time).toFixed(1)} hours daily`
+                });
+            }
+
+            suggestions.push({
+                icon: 'fa-chart-line',
+                title: 'Improve Fuel Efficiency',
+                description: `Route optimization improves fuel efficiency from ${data.current.efficiency.toFixed(1)} to ${data.optimized.efficiency.toFixed(1)} km/L`,
+                impact: `Improvement of ${Math.round((data.optimized.efficiency/data.current.efficiency - 1)*100)}%`
+            });
+
+            suggestions.forEach(suggestion => {
+                const suggestionDiv = document.createElement('div');
+                suggestionDiv.className = 'route-card route-optimal';
+                suggestionDiv.innerHTML = `
+                    <h6><i class="fas ${suggestion.icon} me-2 text-success"></i>${suggestion.title}</h6>
+                    <p class="mb-1">${suggestion.description}</p>
+                    <small class="text-success"><strong>Impact:</strong> ${suggestion.impact}</small>
+                `;
+                resultsDiv.appendChild(suggestionDiv);
+            });
+
+            // Show optimization benefits
+            document.getElementById('optimizationBenefits').style.display = 'flex';
+            document.getElementById('fuelSavings').textContent = `${data.optimized.fuelSavings}%`;
+            document.getElementById('timeSavings').textContent = `${data.optimized.timeSavings}%`;
+            document.getElementById('costSavings').textContent = formatCurrency(data.optimized.dailySavings);
+
+            // Update route metrics
+            const fuelCostPerL = parseFloat(document.getElementById('fuelCost').value);
+            document.getElementById('routeMetrics').innerHTML = `
+                <tr>
+                    <td>Distance:</td>
+                    <td class="text-end"><strong>${Math.round(data.optimized.distance)} km</strong></td>
+                </tr>
+                <tr>
+                    <td>Travel Time:</td>
+                    <td class="text-end"><strong>${data.optimized.time.toFixed(1)} hours</strong></td>
+                </tr>
+                <tr>
+                    <td>Fuel Consumption:</td>
+                    <td class="text-end"><strong>${Math.round(data.optimized.fuel)} liters</strong></td>
+                </tr>
+                <tr>
+                    <td>Fuel Cost:</td>
+                    <td class="text-end"><strong>${formatCurrency(data.optimized.fuel * fuelCostPerL)}</strong></td>
+                </tr>
+                <tr>
+                    <td>Daily Savings:</td>
+                    <td class="text-end text-success"><strong>${formatCurrency(data.optimized.dailySavings)}</strong></td>
+                </tr>
+                <tr>
+                    <td>Monthly Savings:</td>
+                    <td class="text-end text-success"><strong>${formatCurrency(data.optimized.dailySavings * 30)}</strong></td>
+                </tr>
+            `;
+
+            // Update progress bars
+            document.getElementById('fuelProgress').style.width = `${data.optimized.fuelSavings}%`;
+            document.getElementById('timeProgress').style.width = `${data.optimized.timeSavings}%`;
+            document.getElementById('costProgress').style.width = `${data.optimized.costSavings}%`;
+
+            document.getElementById('fuelEfficiencyLabel').textContent = `${data.optimized.fuelSavings}%`;
+            document.getElementById('timeEfficiencyLabel').textContent = `${data.optimized.timeSavings}%`;
+            document.getElementById('costEfficiencyLabel').textContent = `${data.optimized.costSavings}%`;
+        }
+
+        function generateScenarios() {
+            if (!currentOptimization) return;
+
+            scenarioData = [
+                {
+                    id: 1,
+                    name: 'Optimized Balanced',
+                    type: 'optimal',
+                    profit: currentAnalysis ? currentAnalysis.profit * 1.15 : 50000,
+                    fuelSavings: currentOptimization.optimized.fuelSavings,
+                    timeSavings: currentOptimization.optimized.timeSavings,
+                    dailySavings: currentOptimization.optimized.dailySavings,
+                    description: 'Best balance of fuel efficiency, time savings, and cost reduction',
+                    features: ['Reduced distance', 'Improved fuel efficiency', 'Better traffic flow']
+                },
+                {
+                    id: 2,
+                    name: 'Fuel Focused',
+                    type: 'alternative',
+                    profit: currentAnalysis ? currentAnalysis.profit * 1.08 : 45000,
+                    fuelSavings: currentOptimization.optimized.fuelSavings + 5,
+                    timeSavings: currentOptimization.optimized.timeSavings - 5,
+                    dailySavings: currentOptimization.optimized.dailySavings * 0.9,
+                    description: 'Maximizes fuel savings with slightly longer travel time',
+                    features: ['Shortest possible route', 'Avoids hills', 'Constant speed']
+                },
+                {
+                    id: 3,
+                    name: 'Time Focused',
+                    type: 'alternative',
+                    profit: currentAnalysis ? currentAnalysis.profit * 1.12 : 48000,
+                    fuelSavings: currentOptimization.optimized.fuelSavings - 3,
+                    timeSavings: currentOptimization.optimized.timeSavings + 7,
+                    dailySavings: currentOptimization.optimized.dailySavings * 1.1,
+                    description: 'Prioritizes time savings with highway usage',
+                    features: ['Expressway usage', 'Minimal stops', 'Higher average speed']
+                }
+            ];
+
+            displayScenarios();
+        }
+
+        function displayScenarios() {
+            const comparisonDiv = document.getElementById('scenarioComparison');
+            comparisonDiv.innerHTML = '';
+
+            scenarioData.forEach(scenario => {
+                const colDiv = document.createElement('div');
+                colDiv.className = 'col-md-4';
+                colDiv.innerHTML = `
+                    <div class="card h-100">
+                        <div class="card-header ${scenario.type === 'optimal' ? 'bg-success' : 'bg-warning'} text-white">
+                            <h6 class="mb-0">${scenario.name}</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="text-center mb-3">
+                                <div class="stat-value ${scenario.profit >= 0 ? 'profit-positive' : 'profit-negative'}">
+                                    ${formatCurrency(scenario.profit)}
+                                </div>
+                                <div class="stat-label">Daily Profit</div>
+                            </div>
+
+                            <p class="mb-3">${scenario.description}</p>
+
+                            <div class="row text-center mb-3">
+                                <div class="col-4">
+                                    <small class="text-muted">Fuel</small>
+                                    <h6 class="text-success">+${scenario.fuelSavings}%</h6>
+                                </div>
+                                <div class="col-4">
+                                    <small class="text-muted">Time</small>
+                                    <h6 class="text-success">+${scenario.timeSavings}%</h6>
+                                </div>
+                                <div class="col-4">
+                                    <small class="text-muted">Savings</small>
+                                    <h6 class="text-success">${formatCurrency(scenario.dailySavings)}</h6>
+                                </div>
+                            </div>
+
+                            <h6>Key Features:</h6>
+                            <ul class="mb-3">
+                                ${scenario.features.map(feature => `<li>${feature}</li>`).join('')}
+                            </ul>
+
+                            <div class="d-grid">
+                                <button class="btn btn-sm btn-outline-${scenario.type === 'optimal' ? 'success' : 'warning'}" onclick="selectScenario(${scenario.id})">
+                                    <i class="fas fa-route me-2"></i>Select This Scenario
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                comparisonDiv.appendChild(colDiv);
+            });
+
+            // Update optimal scenario display
+            const optimal = scenarioData.find(s => s.type === 'optimal');
+            if (optimal) {
+                document.getElementById('optimalScenarioTitle').textContent = optimal.name;
+                document.getElementById('optimalScenarioDesc').textContent = optimal.description;
+                document.getElementById('optimalProfit').textContent = `+${Math.round((optimal.profit/(currentAnalysis?.profit || 1)-1)*100)}%`;
+                document.getElementById('optimalFuel').textContent = `+${optimal.fuelSavings}%`;
+                document.getElementById('optimalTime').textContent = `+${optimal.timeSavings}%`;
+            }
+        }
+
+        function selectScenario(scenarioId) {
+            const scenario = scenarioData.find(s => s.id === scenarioId);
+            if (!scenario) return;
+
+            // Update profit form with scenario data
+            if (currentOptimization) {
+                document.getElementById('totalDistance').value = currentOptimization.optimized.distance;
+                document.getElementById('fuelCost').value = parseFloat(document.getElementById('fuelCost').value) * 0.98;
+
+                // Switch to profit tab
+                switchTab('profit-tab-pane');
+
+                // Auto-calculate profit
+                setTimeout(() => {
+                    calculateProfit();
+                }, 500);
+            }
+
+            showNotification(`Scenario "${scenario.name}" selected. Parameters updated.`, 'success');
+        }
+
+        function applyRouteOptimization() {
+            if (!currentOptimization) {
+                showNotification('Please optimize route first.', 'warning');
+                return;
+            }
+
+            // Update the profit form with optimized values
+            document.getElementById('totalDistance').value = Math.round(currentOptimization.optimized.distance);
+
+            // Switch to profit tab and calculate
+            switchTab('profit-tab-pane');
+            setTimeout(() => {
+                calculateProfit();
+            }, 500);
+
+            showNotification('Optimized route applied to profit calculation!', 'success');
+        }
+
+        function applyOptimalScenario() {
+            const optimal = scenarioData.find(s => s.type === 'optimal');
+            if (optimal) {
+                selectScenario(optimal.id);
+            }
+        }
+
+        function showReport() {
+            if (!currentAnalysis) {
+                showNotification('Please calculate profit first.', 'warning');
+                return;
+            }
+
+            // Create report modal
+            const reportHTML = `
+                <div class="modal fade" id="reportModal" tabindex="-1">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title"><i class="fas fa-file-alt me-2"></i>Profit Analysis Report</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="row mb-4">
+                                    <div class="col-md-6">
+                                        <h6>Input Parameters:</h6>
+                                        <table class="table table-sm">
+                                            <tr><td>Daily Collection:</td><td>${formatCurrency(currentAnalysis.key_metrics.daily_collection)}</td></tr>
+                                            <tr><td>Total Distance:</td><td>${currentAnalysis.key_metrics.total_distance} km</td></tr>
+                                            <tr><td>Fuel Cost:</td><td>LKR ${document.getElementById('fuelCost').value}/liter</td></tr>
+                                            <tr><td>Bus Age:</td><td>${document.getElementById('busAge').value} years</td></tr>
+                                        </table>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <h6>Analysis Results:</h6>
+                                        <table class="table table-sm">
+                                            <tr><td>Daily Profit:</td><td class="${currentAnalysis.profit >= 0 ? 'text-success' : 'text-danger'}">${formatCurrency(currentAnalysis.profit)}</td></tr>
+                                            <tr><td>Profit Margin:</td><td>${currentAnalysis.key_metrics.profit_margin.toFixed(1)}%</td></tr>
+                                            <tr><td>Revenue per Km:</td><td>${formatCurrency(currentAnalysis.key_metrics.revenue_per_km)}</td></tr>
+                                            <tr><td>Risk Level:</td><td><span class="badge bg-${currentAnalysis.risk_assessment.color}">${currentAnalysis.risk_assessment.risk_level}</span></td></tr>
+                                        </table>
+                                    </div>
+                                </div>
+
+                                ${currentOptimization ? `
+                                <h6>Route Optimization:</h6>
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <table class="table table-sm">
+                                            <tr><td>Original Distance:</td><td>${Math.round(currentOptimization.current.distance)} km</td></tr>
+                                            <tr><td>Optimized Distance:</td><td>${Math.round(currentOptimization.optimized.distance)} km</td></tr>
+                                            <tr><td>Distance Saved:</td><td class="text-success">${Math.round(currentOptimization.current.distance - currentOptimization.optimized.distance)} km</td></tr>
+                                        </table>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <table class="table table-sm">
+                                            <tr><td>Fuel Savings:</td><td class="text-success">+${currentOptimization.optimized.fuelSavings}%</td></tr>
+                                            <tr><td>Time Savings:</td><td class="text-success">+${currentOptimization.optimized.timeSavings}%</td></tr>
+                                            <tr><td>Daily Cost Savings:</td><td class="text-success">${formatCurrency(currentOptimization.optimized.dailySavings)}</td></tr>
+                                        </table>
+                                    </div>
+                                </div>
+                                ` : ''}
+
+                                <div class="alert alert-info">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    Report generated on ${new Date().toLocaleString()}
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                <button type="button" class="btn btn-primary" onclick="printReport()">
+                                    <i class="fas fa-print me-2"></i>Print Report
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            const modalDiv = document.createElement('div');
+            modalDiv.innerHTML = reportHTML;
+            document.body.appendChild(modalDiv);
+
+            const modal = new bootstrap.Modal(document.getElementById('reportModal'));
+            modal.show();
+
+            document.getElementById('reportModal').addEventListener('hidden.bs.modal', function () {
+                modalDiv.remove();
+            });
+        }
+
+        function printReport() {
+            window.print();
+        }
+
+        function saveAnalysis() {
+            if (!currentAnalysis) {
+                showNotification('Please calculate profit first.', 'warning');
+                return;
+            }
+
+            // In a real app, this would save to backend
+            const analysisData = {
+                profit_analysis: currentAnalysis,
+                route_optimization: currentOptimization,
+                saved_at: new Date().toISOString()
+            };
+
+            // For demo, save to localStorage
+            localStorage.setItem('profitRouteAnalysis_' + Date.now(), JSON.stringify(analysisData));
+
+            showNotification('Analysis saved successfully!', 'success');
+        }
+
+        function compareScenarios() {
+            if (!currentAnalysis) {
+                showNotification('Please calculate profit first.', 'warning');
+                return;
+            }
+
+            // Generate comparison scenarios
+            const scenarios = [
+                {
+                    name: 'Current',
+                    profit: currentAnalysis.profit,
+                    profit_margin: currentAnalysis.key_metrics.profit_margin,
+                    risk_score: currentAnalysis.risk_assessment.risk_score
+                },
+                {
+                    name: 'With Route Optimization',
+                    profit: currentAnalysis.profit * 1.15,
+                    profit_margin: currentAnalysis.key_metrics.profit_margin * 1.1,
+                    risk_score: Math.max(0, currentAnalysis.risk_assessment.risk_score - 20)
+                },
+                {
+                    name: 'With Cost Reduction',
+                    profit: currentAnalysis.profit * 1.25,
+                    profit_margin: currentAnalysis.key_metrics.profit_margin * 1.15,
+                    risk_score: Math.max(0, currentAnalysis.risk_assessment.risk_score - 15)
+                }
+            ];
+
+            // Show comparison in modal
+            const comparisonHTML = `
+                <div class="modal fade" id="comparisonModal" tabindex="-1">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title"><i class="fas fa-exchange-alt me-2"></i>Scenario Comparison</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="row">
+                                    ${scenarios.map(scenario => `
+                                        <div class="col-md-4">
+                                            <div class="card h-100">
+                                                <div class="card-header ${scenario.name === 'Current' ? 'bg-info' : scenario.name.includes('Optimization') ? 'bg-success' : 'bg-warning'} text-white">
+                                                    <h6 class="mb-0">${scenario.name}</h6>
+                                                </div>
+                                                <div class="card-body">
+                                                    <div class="text-center mb-3">
+                                                        <div class="stat-value ${scenario.profit >= 0 ? 'profit-positive' : 'profit-negative'}">
+                                                            ${formatCurrency(scenario.profit)}
+                                                        </div>
+                                                        <div class="stat-label">Daily Profit</div>
+                                                    </div>
+                                                    <table class="table table-sm">
+                                                        <tr>
+                                                            <td>Profit Margin:</td>
+                                                            <td class="text-end">${scenario.profit_margin.toFixed(1)}%</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td>Risk Score:</td>
+                                                            <td class="text-end">${scenario.risk_score}/100</td>
+                                                        </tr>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                                <div class="alert alert-success mt-3">
+                                    <i class="fas fa-lightbulb me-2"></i>
+                                    <strong>Recommendation:</strong> Route optimization provides the best balance of profit improvement and risk reduction.
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                <button type="button" class="btn btn-success" onclick="switchTab('routes-tab-pane'); $('#comparisonModal').modal('hide');">
+                                    <i class="fas fa-route me-2"></i>Go to Route Optimization
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            const modalDiv = document.createElement('div');
+            modalDiv.innerHTML = comparisonHTML;
+            document.body.appendChild(modalDiv);
+
+            const modal = new bootstrap.Modal(document.getElementById('comparisonModal'));
+            modal.show();
+
+            document.getElementById('comparisonModal').addEventListener('hidden.bs.modal', function () {
+                modalDiv.remove();
+            });
+        }
+
+        // Assessment Scheduler Functions
+        function scheduleAssessment(event) {
+            event.preventDefault();
+
+            // Get form values
+            const busId = document.getElementById('schedBusId').value;
+            const route = document.getElementById('schedRoute').value;
+            const type = document.getElementById('schedType').value;
+            const date = document.getElementById('schedDate').value;
+            const time = document.getElementById('schedTime').value;
+
+            // Format Date and Time for Display
+            const dateObj = new Date(date);
+            const formattedDate = dateObj.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+
+            // Create a new row in the table
+            const tableBody = document.getElementById('scheduleTableBody');
+            const newRow = document.createElement('tr');
+
+            // Determine badge color based on type
+            let badgeClass = 'bg-primary';
+            if (type === 'Route Optimization') badgeClass = 'bg-success';
+            if (type === 'Comprehensive (Both)') badgeClass = 'bg-info';
+
+            newRow.innerHTML = `
+                <td class="ps-4">
+                    <strong>${formattedDate}</strong><br>
+                    <small class="text-muted">${time}</small>
+                </td>
+                <td>${busId}</td>
+                <td>${route}</td>
+                <td>${type}</td>
+                <td><span class="badge ${badgeClass}">Scheduled</span></td>
+                <td class="text-end pe-4">
+                    <button class="btn btn-sm btn-outline-success" onclick="this.closest('tr').remove(); showNotification('Assessment marked as complete.', 'success');"><i class="fas fa-check"></i></button>
+                    <button class="btn btn-sm btn-outline-danger" onclick="this.closest('tr').remove(); showNotification('Schedule removed.', 'info');"><i class="fas fa-times"></i></button>
+                </td>
+            `;
+
+            tableBody.insertBefore(newRow, tableBody.firstChild);
+
+            showNotification('Assessment successfully scheduled.', 'success');
+
+            // Reset form
+            document.getElementById('assessmentScheduleForm').reset();
+        }
+
+        function formatCurrency(amount) {
+            if (amount >= 1000000) {
+                return 'LKR ' + (amount / 1000000).toFixed(1) + 'M';
+            } else if (amount >= 1000) {
+                return 'LKR ' + (amount / 1000).toFixed(1) + 'K';
+            } else {
+                return 'LKR ' + amount.toFixed(0);
+            }
+        }
+
+        function showNotification(message, type) {
+            const alertClass = {
+                'success': 'alert-success',
+                'error': 'alert-danger',
+                'warning': 'alert-warning',
+                'info': 'alert-info'
+            }[type] || 'alert-info';
+
+            const notification = document.createElement('div');
+            notification.className = `alert ${alertClass} alert-dismissible fade show position-fixed`;
+            notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+            notification.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+
+            document.body.appendChild(notification);
+
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.remove();
+                }
+            }, 5000);
+        }
+
+        // Initialize on load
+        document.addEventListener('DOMContentLoaded', function() {
+            // Load sample data for initial calculation
+            loadSampleData();
+
+            // Set min date for scheduler to today
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('schedDate').min = today;
+
+            // Auto-calculate profit after a short delay
+            setTimeout(() => {
+                calculateProfit();
+            }, 1000);
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,1072 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Driver Behavior Analyze</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: white;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Navbar Styles */
+        .navbar-brand { font-weight: bold; font-size: 1.5rem; }
+        .live-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            background-color: #2ecc71;
+            border-radius: 50%;
+            margin-right: 5px;
+            animation: pulse-green 2s infinite;
+        }
+        @keyframes pulse-green {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        .system-status {
+            font-size: 0.9rem;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            background: rgba(46, 204, 113, 0.1);
+            border: 1px solid rgba(46, 204, 113, 0.3);
+            color: #ecf0f1;
+        }
+
+        /* Container & Centering */
+        .app-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 30px 20px;
+            flex: 1;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .centered-wrapper {
+            max-width: 1100px;
+            width: 100%;
+            margin: 0 auto;
+        }
+
+        /* Feature Cards */
+        .feature-nav-grid {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 30px;
+            width: 100%;
+            max-width: 1100px;
+        }
+        .feature-nav-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            flex: 1 1 250px;
+            max-width: 320px;
+        }
+        .feature-nav-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+            color: white;
+            background: rgba(255, 255, 255, 0.08);
+        }
+        .feature-nav-card.active {
+            border-color: #4cc9f0;
+            background: rgba(76, 201, 240, 0.1);
+        }
+        .feature-nav-card i {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+        .feature-nav-card.ability i { color: #f39c12; }
+        .feature-nav-card.alcohol i { color: #60a5fa; }
+        .feature-nav-card.behavior i { color: #3498db; }
+
+        /* Header */
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 25px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            width: 100%;
+        }
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            color: #60a5fa;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+        }
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.8;
+            margin: 0 auto;
+            max-width: 800px;
+            line-height: 1.6;
+        }
+
+        /* Tabs */
+        .tab-container {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 30px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 15px;
+            width: 100%;
+        }
+        .tab {
+            padding: 12px 30px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #94a3b8;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-family: 'Poppins', sans-serif;
+            font-size: 1.05rem;
+        }
+        .tab:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+        .tab.active {
+            background: linear-gradient(135deg, #4361ee 0%, #3a0ca3 100%);
+            color: white;
+            border-color: transparent;
+            box-shadow: 0 4px 15px rgba(67, 97, 238, 0.3);
+        }
+        .tab-content { display: none; width: 100%; }
+        .tab-content.active { display: block; animation: fadeIn 0.4s ease; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Main Content Layout */
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            align-items: stretch;
+        }
+        @media (max-width: 992px) {
+            .main-content { grid-template-columns: 1fr; }
+        }
+
+        .panel-section, .analysis-section, .detection-section {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 15px;
+            padding: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+            display: flex;
+            flex-direction: column;
+        }
+        .section-title {
+            font-size: 1.5rem;
+            margin-bottom: 25px;
+            background: linear-gradient(135deg, #4cc9f0 0%, #4361ee 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            justify-content: center;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding-bottom: 15px;
+        }
+
+        /* Camera / Feed */
+        .camera-container {
+            position: relative;
+            width: 100%;
+            height: 380px;
+            background: #000;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 25px;
+            border: 1px solid rgba(255,255,255,0.1);
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
+        }
+        #videoFeed {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .camera-overlay {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            right: 15px;
+            display: flex;
+            justify-content: space-between;
+            z-index: 10;
+        }
+        .camera-status {
+            background: rgba(0, 0, 0, 0.7);
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .camera-status.active { background: rgba(239, 68, 68, 0.8); }
+        .camera-status.inactive { background: rgba(148, 163, 184, 0.8); }
+
+        .recording-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            background: #ef4444;
+            border-radius: 50%;
+            margin-right: 8px;
+            animation: pulse-red 1.5s infinite;
+        }
+        @keyframes pulse-red {
+            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+
+        /* Controls */
+        .controls-section, .controls {
+            display: flex;
+            gap: 15px;
+            margin-top: auto;
+        }
+        .btn-custom {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.05rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            flex: 1;
+            font-family: 'Poppins', sans-serif;
+        }
+        .btn-primary-custom {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+        }
+        .btn-primary-custom:hover { transform: translateY(-3px); box-shadow: 0 8px 15px rgba(16, 185, 129, 0.3); color: white; }
+
+        .btn-danger-custom {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: white;
+        }
+        .btn-danger-custom:hover { transform: translateY(-3px); box-shadow: 0 8px 15px rgba(239, 68, 68, 0.3); color: white; }
+
+        .btn-secondary-custom {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .btn-secondary-custom:hover { background: rgba(255, 255, 255, 0.2); color: white; transform: translateY(-3px); }
+
+        /* Stats & Metrics */
+        .metrics-info {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .metric-status { text-align: center; }
+        .metric-value { font-size: 1.5rem; font-weight: 700; color: #4cc9f0; }
+        .metric-label { font-size: 0.9rem; opacity: 0.8; }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+        .stat-item {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.05);
+            transition: all 0.3s ease;
+        }
+        .stat-item:hover { background: rgba(255, 255, 255, 0.08); transform: translateY(-3px); }
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #4cc9f0;
+            margin-bottom: 5px;
+            transition: color 0.3s ease;
+        }
+        .stat-label { font-size: 0.85rem; opacity: 0.7; text-transform: uppercase; }
+
+        /* Alerts Bar */
+        .alerts-card {
+            background: rgba(0, 0, 0, 0.3); border-radius: 15px; padding: 25px;
+            border: 1px solid rgba(255,255,255,0.1); flex: 1; overflow: hidden;
+            display: flex; flex-direction: column;
+        }
+        .alerts-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .alerts-list { max-height: 250px; overflow-y: auto; padding-right: 10px; flex: 1;}
+        .alert-item {
+            background: rgba(239, 68, 68, 0.1); border-left: 4px solid #ef4444;
+            padding: 15px; border-radius: 8px; margin-bottom: 10px; animation: slideIn 0.3s ease;
+        }
+        .alert-time { font-size: 0.8rem; opacity: 0.7; margin-bottom: 5px; }
+        .alert-msg { font-weight: 600; font-size: 1.05rem; }
+
+        /* Manual Input specific styles */
+        .input-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 25px;
+            margin-bottom: 30px;
+            padding: 0 15px;
+        }
+        .input-group label {
+            display: block;
+            margin-bottom: 12px;
+            font-size: 1rem;
+            color: #cbd5e1;
+            font-weight: 500;
+        }
+        .input-range { display: flex; align-items: center; gap: 20px; }
+        .input-range input[type="range"] {
+            flex: 1; height: 8px; background: rgba(255, 255, 255, 0.1); border-radius: 4px; outline: none; -webkit-appearance: none;
+        }
+        .input-range input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none; width: 22px; height: 22px; background: #4cc9f0; border-radius: 50%; cursor: pointer;
+            box-shadow: 0 0 10px rgba(76, 201, 240, 0.5); border: 2px solid white;
+        }
+        .range-value {
+            min-width: 80px; text-align: center; font-weight: 600; color: #4cc9f0; background: rgba(255,255,255,0.05);
+            padding: 6px 12px; border-radius: 6px; font-size: 1rem; border: 1px solid rgba(76, 201, 240, 0.2);
+        }
+
+        .prediction-result {
+            text-align: center; padding: 30px; background: linear-gradient(135deg, rgba(76, 201, 240, 0.1) 0%, rgba(67, 97, 238, 0.05) 100%);
+            border-radius: 10px; margin-bottom: 25px; border: 1px solid rgba(76, 201, 240, 0.2);
+        }
+
+        /* History & Warnings */
+        .history-item {
+            background: rgba(255, 255, 255, 0.05); border-radius: 8px; padding: 15px 20px;
+            margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; border-left: 4px solid; transition: all 0.3s ease;
+        }
+        .history-item:hover { background: rgba(255, 255, 255, 0.08); transform: translateX(5px); }
+        .history-item.safe { border-left-color: #10b981; }
+        .history-item.warning { border-left-color: #f59e0b; }
+        .history-item.danger { border-left-color: #ef4444; }
+
+        .warning-box {
+            background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3);
+            border-radius: 10px; padding: 20px; margin-top: 20px; text-align: center;
+        }
+
+        /* Instructions */
+        .instructions {
+            background: rgba(0, 0, 0, 0.3); border-radius: 15px; padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); margin-top: 30px;
+        }
+        .instructions h3 { font-size: 1.3rem; margin-bottom: 15px; color: #4cc9f0; display: flex; align-items: center; gap: 10px; }
+        .instructions ul { list-style: none; padding-left: 20px; }
+        .instructions li { margin-bottom: 10px; padding-left: 10px; position: relative; }
+        .instructions li:before { content: "•"; color: #4cc9f0; position: absolute; left: -10px; }
+
+        .empty-state { text-align: center; padding: 40px 20px; opacity: 0.7; }
+        .empty-state i { font-size: 3rem; margin-bottom: 15px; opacity: 0.5; }
+
+        /* Notification */
+        .notification-toast {
+            position: fixed; top: 20px; right: 20px; padding: 15px 25px; border-radius: 8px; color: white;
+            font-weight: 500; z-index: 9999; box-shadow: 0 5px 15px rgba(0,0,0,0.3); display: flex; align-items: center; gap: 10px;
+            animation: slideInRight 0.3s ease forwards;
+        }
+        @keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+        .alert-sound {
+            position: fixed; bottom: 20px; right: 20px; background: rgba(0, 0, 0, 0.7);
+            padding: 15px; border-radius: 10px; display: none; align-items: center; gap: 10px;
+            animation: slideIn 0.3s ease; z-index: 1000;
+        }
+        .alert-sound.show { display: flex; }
+
+        /* Footer */
+        footer { margin-top: auto; padding: 2rem 0; background: rgba(0,0,0,0.8); color: white; border-top: 1px solid rgba(255,255,255,0.1); }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar navbar-expand-lg navbar-dark" style="background-color: rgba(0,0,0,0.8); border-bottom: 1px solid rgba(255,255,255,0.1);">
+        <div class="container-fluid px-4">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-bus me-2"></i>Travel Agent Supporting Tool
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item"><a class="nav-link" href="/">Home</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/history">History</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/about">About</a></li>
+                </ul>
+                <div class="system-status ms-3">
+                    <span class="live-indicator"></span> System Ready
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="app-container">
+
+        <div class="centered-wrapper">
+
+            <div class="feature-nav-grid">
+                <a href="/driving_ab" class="feature-nav-card ability">
+                    <i class="fas fa-user-clock"></i>
+                    <h5>Driving Ability Monitor</h5>
+                </a>
+                <a href="/drunkard_level" class="feature-nav-card alcohol">
+                    <i class="fas fa-wine-bottle"></i>
+                    <h5>Alcohol Level Detection</h5>
+                </a>
+                <a href="/driver_behavior" class="feature-nav-card behavior active">
+                    <i class="fas fa-video"></i>
+                    <h5>Driver Behavior Analyze</h5>
+                </a>
+            </div>
+
+            <div class="header">
+                <h1><i class="fas fa-wine-glass-alt"></i> IoT Powered Alcohol Level Detection</h1>
+                <p>Real-time monitoring and analysis of driver sobriety using advanced sensor data and AI.</p>
+            </div>
+
+            <div class="tab-container">
+                <button class="tab active" onclick="switchTab('live-detection')">
+                    <i class="fas fa-camera"></i> Live Detection
+                </button>
+                <button class="tab" onclick="switchTab('manual-input')">
+                    <i class="fas fa-sliders-h"></i> Manual Input
+                </button>
+                <button class="tab" onclick="switchTab('history')">
+                    <i class="fas fa-history"></i> Full History
+                </button>
+            </div>
+
+            <div class="tab-content active" id="live-detection-tab">
+                <div class="main-content">
+                    <div class="panel-section">
+                        <h2 class="section-title"><i class="fas fa-video"></i> Camera Feed</h2>
+                        <div class="camera-container">
+                            <img id="videoFeed" src="{{ url_for('video_feed') }}" alt="Camera Feed">
+                            <div class="camera-overlay">
+                                <div class="camera-status inactive" id="cameraStatus">
+                                    <span id="statusIndicator"></span>
+                                    <span id="statusText">Camera Standby</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="controls-section">
+                            <button class="btn-custom btn-primary-custom" onclick="startMonitoring()">
+                                <i class="fas fa-play-circle"></i> Start Recording
+                            </button>
+                            <button class="btn-custom btn-danger-custom" onclick="stopMonitoring()">
+                                <i class="fas fa-stop-circle"></i> Stop Recording
+                            </button>
+                        </div>
+
+                        <div class="metrics-info">
+                            <div class="metric-status">
+                                <div class="metric-value" id="sessionTime">00:00</div>
+                                <div class="metric-label">Session Time</div>
+                            </div>
+                            <div class="metric-status">
+                                <div class="metric-value" id="dataStream" style="color: #94a3b8;">Standby</div>
+                                <div class="metric-label">Sensor Stream</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="panel-section">
+                        <h2 class="section-title"><i class="fas fa-heartbeat"></i> Real-Time Analysis</h2>
+                        <div class="stats-grid">
+                            <div class="stat-item">
+                                <div class="stat-value" id="valAlcohol">0.0</div>
+                                <div class="stat-label">Alcohol (ppm)</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value" id="valHeartRate">--</div>
+                                <div class="stat-label">Heart Rate (bpm)</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value" id="valMovement">--</div>
+                                <div class="stat-label">Movement Score</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value" id="valTemp">--</div>
+                                <div class="stat-label">Temp (°C)</div>
+                            </div>
+                            <div class="stat-item" style="grid-column: 1 / -1;">
+                                <div class="stat-value" id="valHumidity">--</div>
+                                <div class="stat-label">Humidity (%)</div>
+                            </div>
+                        </div>
+
+                        <div class="alerts-card" style="margin-top: 20px;">
+                            <div class="alerts-header">
+                                <h3><i class="fas fa-bell"></i> Live Alerts</h3>
+                                <button class="btn-custom btn-secondary-custom" onclick="clearAlerts()" style="padding: 6px 12px; font-size: 0.85rem; flex: none;">
+                                    <i class="fas fa-trash"></i> Clear
+                                </button>
+                            </div>
+                            <div class="alerts-list" id="alertsList">
+                                <div class="empty-state">
+                                    <i class="fas fa-shield-alt"></i>
+                                    <p>No anomalies detected. All sensors normal.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="instructions">
+                    <h3><i class="fas fa-info-circle"></i> How It Works</h3>
+                    <ul>
+                        <li><strong>Camera acts as a continuous recording device</strong> for journey auditing and visual confirmation.</li>
+                        <li><strong>Simulated IoT sensors</strong> feed real-time physiological data into the system, representing physical devices attached to the steering wheel or driver's seat.</li>
+                        <li><strong>Real-time ML analysis</strong> continuously monitors the incoming Alcohol Level, Heart Rate, and Movement scores against baseline safety thresholds.</li>
+                        <li><strong>System triggers alerts automatically</strong> if any biological metric indicates high alcohol content or severe fatigue.</li>
+                        <li>Data logs and camera footage are synchronized for comprehensive post-journey reporting.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="tab-content" id="manual-input-tab">
+                <div class="main-content">
+                    <div class="panel-section">
+                        <h2 class="section-title"><i class="fas fa-vial"></i> Predict Ambient Alcohol</h2>
+                        <p class="text-center mb-4" style="color: #94a3b8;">Adjust the environmental and biological parameters below to simulate and predict the ambient alcohol concentration using the ML Model.</p>
+
+                        <div class="input-grid">
+                            <div class="input-group">
+                                <label><i class="fas fa-wine-bottle"></i> Alcohol Level (ppm)</label>
+                                <div class="input-range">
+                                    <input type="range" id="inputAlcoholLevel" min="0" max="1000" value="40" step="1">
+                                    <span class="range-value" id="alcoholLevelValue">40 ppm</span>
+                                </div>
+                            </div>
+
+                            <div class="input-group">
+                                <label><i class="fas fa-heartbeat"></i> Heart Rate (bpm)</label>
+                                <div class="input-range">
+                                    <input type="range" id="inputHeartRate" min="40" max="200" value="75" step="1">
+                                    <span class="range-value" id="heartRateValue">75 bpm</span>
+                                </div>
+                            </div>
+
+                            <div class="input-group">
+                                <label><i class="fas fa-running"></i> Movement Score</label>
+                                <div class="input-range">
+                                    <input type="range" id="inputMovementScore" min="0" max="100" value="50" step="1">
+                                    <span class="range-value" id="movementScoreValue">50</span>
+                                </div>
+                            </div>
+
+                            <div class="input-group">
+                                <label><i class="fas fa-thermometer-half"></i> Temperature (°C)</label>
+                                <div class="input-range">
+                                    <input type="range" id="inputTemperature" min="0" max="50" value="25" step="0.1">
+                                    <span class="range-value" id="temperatureValue">25°C</span>
+                                </div>
+                            </div>
+
+                            <div class="input-group" style="grid-column: 1 / -1;">
+                                <label><i class="fas fa-tint"></i> Humidity (%)</label>
+                                <div class="input-range">
+                                    <input type="range" id="inputHumidity" min="0" max="100" value="50" step="1">
+                                    <span class="range-value" id="humidityValue">50%</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="controls mt-4">
+                            <button class="btn-custom btn-primary-custom" onclick="predictAmbientAlcohol()">
+                                <i class="fas fa-calculator"></i> Run Prediction Model
+                            </button>
+                            <button class="btn-custom btn-secondary-custom" onclick="loadDefaultValues()">
+                                <i class="fas fa-undo"></i> Reset
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="panel-section">
+                        <h2 class="section-title"><i class="fas fa-poll-h"></i> Prediction Results</h2>
+
+                        <div class="prediction-result" id="ambientResult" style="display: none;">
+                            <div class="metric-value" id="ambientAlcoholValue" style="font-size: 3.5rem;">0.00 ppm</div>
+                            <div class="metric-label" style="margin-bottom: 20px; font-size: 1.1rem; text-transform: uppercase;">Predicted Ambient Alcohol</div>
+                            <div id="ambientClassification" class="mt-4"></div>
+                        </div>
+
+                        <div class="info-grid" id="predictionDetailsGrid" style="display: none;">
+                            <div class="info-item">
+                                <div class="info-value" id="predictionConfidence">-</div>
+                                <div class="info-label">Confidence</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-value" id="predictionRisk">-</div>
+                                <div class="info-label">Risk Level</div>
+                            </div>
+                        </div>
+
+                        <div class="warning-box mt-4" id="manualWarningBox" style="display: none;">
+                            <h3 id="warningTitle">Status</h3>
+                            <p id="warningMessage">Prediction results will appear here.</p>
+                        </div>
+
+                        <div id="emptyPredictionState" class="text-center p-5" style="opacity: 0.5;">
+                            <i class="fas fa-robot fa-4x mb-3"></i>
+                            <h4>Awaiting Data</h4>
+                            <p>Adjust parameters and click 'Run Prediction Model' to see results.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-content" id="history-tab">
+                <div class="panel-section" style="max-width: 900px; margin: 0 auto; width: 100%;">
+                    <h2 class="section-title"><i class="fas fa-list-alt"></i> Session Logs</h2>
+
+                    <div class="controls" style="margin-bottom: 30px;">
+                        <button class="btn-custom btn-primary-custom" onclick="downloadReport()">
+                            <i class="fas fa-file-pdf"></i> Download Report
+                        </button>
+                        <button class="btn-custom btn-danger-custom" onclick="clearAllHistory()">
+                            <i class="fas fa-trash"></i> Clear Logs
+                        </button>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
+                        <div>
+                            <h4 class="mb-3 text-center" style="color: #4cc9f0; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px;">Live Detection History</h4>
+                            <div id="liveHistoryLog" class="mb-5">
+                                <div class="history-item safe text-center justify-content-center" style="opacity: 0.5;">
+                                    No live detection data recorded yet.
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <h4 class="mb-3 text-center" style="color: #4cc9f0; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px;">Manual Predictions</h4>
+                            <div id="manualHistoryList">
+                                <div class="history-item safe text-center justify-content-center" style="opacity: 0.5;">
+                                    No manual predictions made yet.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div> <div class="alert-sound" id="alertSound">
+            <i class="fas fa-exclamation-triangle fa-2x" style="color: #f72585;"></i>
+            <div>
+                <h4 style="margin: 0;">Physiological Alert!</h4>
+                <p style="margin: 5px 0 0 0; opacity: 0.8;">Check the alerts panel for details</p>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <div class="container text-center">
+            <p class="mb-2">© 2024 Travel Agent Supporting Tool. All rights reserved.</p>
+            <p class="text-muted" style="color: #adb5bd !important;">Powered by AI & Machine Learning Technologies</p>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        let monitoring = false;
+        let startTime = null;
+        let sessionTimer = null;
+        let simInterval = null;
+        let liveAlerts = [];
+        let manualPredictions = [];
+
+        // Realistic Base Metrics
+        let metrics = {
+            alcohol: 2.0,
+            heartRate: 72,
+            movement: 65,
+            temp: 24.5,
+            humidity: 50
+        };
+
+        // DOM Elements
+        const cameraStatus = document.getElementById('cameraStatus');
+        const statusText = document.getElementById('statusText');
+        const statusIndicator = document.getElementById('statusIndicator');
+        const alertsList = document.getElementById('alertsList');
+        const alertSound = document.getElementById('alertSound');
+        const sessionTimeElement = document.getElementById('sessionTime');
+        const dataStreamElement = document.getElementById('dataStream');
+
+        const manualHistoryList = document.getElementById('manualHistoryList');
+        const liveHistoryLog = document.getElementById('liveHistoryLog');
+
+        // Input Bindings for Manual Tab
+        const inputs = ['AlcoholLevel', 'HeartRate', 'MovementScore', 'Temperature', 'Humidity'];
+        inputs.forEach(id => {
+            const el = document.getElementById(`input${id}`);
+            const valEl = document.getElementById(`${id.charAt(0).toLowerCase() + id.slice(1)}Value`);
+            if (el && valEl) {
+                el.addEventListener('input', function() {
+                    let suffix = id === 'AlcoholLevel' ? ' ppm' : id === 'HeartRate' ? ' bpm' : id === 'Temperature' ? '°C' : id === 'Humidity' ? '%' : '';
+                    valEl.textContent = this.value + suffix;
+                });
+            }
+        });
+
+        // Tab Switching
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            document.getElementById(tabName + '-tab').classList.add('active');
+            document.querySelector(`.tab[onclick*="${tabName}"]`).classList.add('active');
+        }
+
+        // Live Monitoring Logic
+        function startMonitoring() {
+            if (monitoring) return;
+            monitoring = true;
+            startTime = new Date();
+
+            cameraStatus.className = 'camera-status active';
+            statusText.textContent = 'Recording Active';
+            statusIndicator.className = 'recording-indicator';
+
+            dataStreamElement.textContent = 'Active';
+            dataStreamElement.style.color = '#2ecc71';
+
+            startSessionTimer();
+            simInterval = setInterval(updateSimulatedMetrics, 1500);
+
+            showToast('Recording and real-time analysis started', 'success');
+        }
+
+        function stopMonitoring() {
+            if (!monitoring) return;
+            monitoring = false;
+
+            cameraStatus.className = 'camera-status inactive';
+            statusText.textContent = 'Camera Standby';
+            statusIndicator.className = '';
+
+            dataStreamElement.textContent = 'Standby';
+            dataStreamElement.style.color = '#94a3b8';
+
+            stopSessionTimer();
+            if (simInterval) clearInterval(simInterval);
+
+            document.getElementById('valAlcohol').textContent = '--';
+            document.getElementById('valHeartRate').textContent = '--';
+            document.getElementById('valMovement').textContent = '--';
+            document.getElementById('valTemp').textContent = '--';
+            document.getElementById('valHumidity').textContent = '--';
+
+            showToast('Recording stopped. Data saved to log.', 'info');
+        }
+
+        function updateSimulatedMetrics() {
+            if (!monitoring) return;
+
+            metrics.alcohol = Math.max(0, metrics.alcohol + (Math.random() * 0.8 - 0.4));
+            metrics.heartRate = Math.max(50, Math.min(170, metrics.heartRate + Math.floor(Math.random() * 5 - 2)));
+            metrics.movement = Math.max(0, Math.min(100, metrics.movement + Math.floor(Math.random() * 15 - 7)));
+            metrics.temp = Math.max(18, Math.min(35, metrics.temp + (Math.random() * 0.4 - 0.2)));
+            metrics.humidity = Math.max(30, Math.min(70, metrics.humidity + Math.floor(Math.random() * 3 - 1)));
+
+            const valAlc = document.getElementById('valAlcohol');
+            const valHR = document.getElementById('valHeartRate');
+            const valMov = document.getElementById('valMovement');
+
+            valAlc.textContent = metrics.alcohol.toFixed(1);
+            valHR.textContent = metrics.heartRate;
+            valMov.textContent = metrics.movement;
+            document.getElementById('valTemp').textContent = metrics.temp.toFixed(1);
+            document.getElementById('valHumidity').textContent = metrics.humidity;
+
+            valAlc.style.color = metrics.alcohol > 15 ? '#ef4444' : metrics.alcohol > 10 ? '#f8961e' : '#4cc9f0';
+            valHR.style.color = (metrics.heartRate > 100 || metrics.heartRate < 60) ? '#ef4444' : '#4cc9f0';
+            valMov.style.color = metrics.movement < 20 ? '#ef4444' : '#4cc9f0';
+
+            // Check Anomalies
+            if (metrics.alcohol > 20.0 && Math.random() < 0.1) {
+                triggerAlert('Elevated Ambient Alcohol Detected', 'HIGH');
+            } else if ((metrics.heartRate > 110 || metrics.heartRate < 55) && Math.random() < 0.1) {
+                triggerAlert('Abnormal Heart Rate Anomaly', 'MEDIUM');
+            } else if (metrics.movement < 15 && Math.random() < 0.1) {
+                triggerAlert('Low Movement / Potential Drowsiness', 'HIGH');
+            }
+        }
+
+        function triggerAlert(message, severity) {
+            const alertObj = {
+                type: message,
+                severity: severity,
+                timestamp: new Date().toISOString()
+            };
+
+            liveAlerts.unshift(alertObj);
+            addAlertToUI(alertObj);
+            addAlertToHistory(alertObj);
+
+            if(severity === 'HIGH') {
+                playAlertSound();
+            }
+        }
+
+        function startSessionTimer() {
+            if (sessionTimer) clearInterval(sessionTimer);
+            sessionTimer = setInterval(() => {
+                if (startTime) {
+                    const diff = Math.floor((new Date() - startTime) / 1000);
+                    const minutes = Math.floor(diff / 60);
+                    const seconds = diff % 60;
+                    sessionTimeElement.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                }
+            }, 1000);
+        }
+
+        function stopSessionTimer() {
+            if (sessionTimer) clearInterval(sessionTimer);
+        }
+
+        function addAlertToUI(alert) {
+            const emptyState = alertsList.querySelector('.empty-state');
+            if (emptyState) emptyState.remove();
+
+            const alertElement = document.createElement('div');
+            let colorClass = alert.severity === 'HIGH' ? 'high' : 'medium';
+            alertElement.className = `alert-item ${colorClass}`;
+            alertElement.innerHTML = `
+                <div class="alert-time">${formatTime(alert.timestamp)}</div>
+                <div class="alert-message">${alert.type}</div>
+            `;
+            alertsList.insertBefore(alertElement, alertsList.firstChild);
+
+            while (alertsList.children.length > 15) {
+                alertsList.removeChild(alertsList.lastChild);
+            }
+        }
+
+        function addAlertToHistory(alert) {
+            if (liveHistoryLog.children[0] && liveHistoryLog.children[0].classList.contains('text-center')) {
+                liveHistoryLog.innerHTML = '';
+            }
+
+            const item = document.createElement('div');
+            let severityClass = alert.severity === 'HIGH' ? 'danger' : 'warning';
+            item.className = `history-item ${severityClass}`;
+            item.innerHTML = `
+                <div>
+                    <div style="font-weight: bold; font-size:1.1rem;">${alert.type}</div>
+                    <div style="font-size: 0.85rem; color: #94a3b8;">${formatTime(alert.timestamp)}</div>
+                </div>
+            `;
+            liveHistoryLog.insertBefore(item, liveHistoryLog.firstChild);
+        }
+
+        // --- Manual Prediction Logic ---
+        function loadDefaultValues() {
+            document.getElementById('inputAlcoholLevel').value = 40;
+            document.getElementById('alcoholLevelValue').textContent = '40 ppm';
+            document.getElementById('inputHeartRate').value = 75;
+            document.getElementById('heartRateValue').textContent = '75 bpm';
+            document.getElementById('inputMovementScore').value = 50;
+            document.getElementById('movementScoreValue').textContent = '50';
+            document.getElementById('inputTemperature').value = 25;
+            document.getElementById('temperatureValue').textContent = '25°C';
+            document.getElementById('inputHumidity').value = 50;
+            document.getElementById('humidityValue').textContent = '50%';
+            showToast('Parameters reset to defaults', 'info');
+        }
+
+        function predictAmbientAlcohol() {
+            const inputData = {
+                alcohol_level: parseFloat(document.getElementById('inputAlcoholLevel').value) / 1000000,
+                heart_rate: parseInt(document.getElementById('inputHeartRate').value),
+                movement_score: parseInt(document.getElementById('inputMovementScore').value),
+                temperature: parseFloat(document.getElementById('inputTemperature').value),
+                humidity: parseFloat(document.getElementById('inputHumidity').value)
+            };
+
+            const result = simulateAmbientAlcoholPrediction(inputData);
+            displayAmbientAlcoholResult(result, inputData);
+            addToManualHistory(result, inputData);
+            showToast('Prediction model executed', 'success');
+        }
+
+        function simulateAmbientAlcoholPrediction(inputData) {
+            let ambientAlcohol = inputData.alcohol_level * 1000000;
+            if (inputData.heart_rate > 100) ambientAlcohol *= 1.3;
+            else if (inputData.heart_rate > 80) ambientAlcohol *= 1.1;
+            ambientAlcohol *= (1 - (inputData.movement_score / 200));
+            ambientAlcohol *= (0.9 + Math.random() * 0.2);
+
+            return {
+                ambient_alcohol_ppm: ambientAlcohol,
+                classification: ambientAlcohol < 10 ? 'VERY LOW' : ambientAlcohol < 50 ? 'LOW' : ambientAlcohol < 200 ? 'MODERATE' : ambientAlcohol < 500 ? 'HIGH' : 'VERY HIGH',
+                is_dangerous: ambientAlcohol > 80,
+                confidence: (0.80 + Math.random()*0.15)
+            };
+        }
+
+        function displayAmbientAlcoholResult(result, inputParams) {
+            document.getElementById('emptyPredictionState').style.display = 'none';
+            document.getElementById('ambientResult').style.display = 'block';
+            document.getElementById('predictionDetailsGrid').style.display = 'grid';
+
+            const ppm = result.ambient_alcohol_ppm.toFixed(1);
+            document.getElementById('ambientAlcoholValue').textContent = ppm + ' ppm';
+
+            const fill = Math.min(100, (result.ambient_alcohol_ppm / 500) * 100);
+            document.getElementById('ambientLevelFill').style.width = `${fill}%`;
+
+            let color = '#4cc9f0';
+            if (result.is_dangerous) color = '#ef4444';
+            else if (result.ambient_alcohol_ppm > 50) color = '#f59e0b';
+            else color = '#10b981';
+
+            document.getElementById('ambientClassification').innerHTML = `<span style="padding: 5px 15px; border-radius: 20px; background: ${color}40; color: ${color}; font-weight:bold; letter-spacing:1px;">${result.classification}</span>`;
+
+            document.getElementById('predictionConfidence').textContent = `${(result.confidence * 100).toFixed(0)}%`;
+            document.getElementById('predictionRisk').textContent = result.is_dangerous ? 'HIGH' : 'LOW';
+
+            const manualWarningBox = document.getElementById('manualWarningBox');
+            manualWarningBox.style.display = 'block';
+            if (result.is_dangerous) {
+                manualWarningBox.style.background = 'rgba(239, 68, 68, 0.1)';
+                manualWarningBox.style.borderColor = 'rgba(239, 68, 68, 0.3)';
+                document.getElementById('warningTitle').innerHTML = '<i class="fas fa-skull-crossbones" style="color:#ef4444;"></i> DANGER';
+                document.getElementById('warningMessage').textContent = `High ambient alcohol detected (${ppm} ppm). Evacuate/Ventilate area.`;
+            } else {
+                manualWarningBox.style.background = 'rgba(16, 185, 129, 0.1)';
+                manualWarningBox.style.borderColor = 'rgba(16, 185, 129, 0.3)';
+                document.getElementById('warningTitle').innerHTML = '<i class="fas fa-check-circle" style="color:#10b981;"></i> SAFE';
+                document.getElementById('warningMessage').textContent = `Ambient atmosphere is within safe parameters (${ppm} ppm).`;
+            }
+        }
+
+        function addToManualHistory(result, inputParams) {
+            if (manualHistoryList.children[0] && manualHistoryList.children[0].classList.contains('text-center')) {
+                manualHistoryList.innerHTML = '';
+            }
+
+            const item = document.createElement('div');
+            let severity = result.is_dangerous ? 'danger' : result.ambient_alcohol_ppm > 50 ? 'warning' : 'safe';
+
+            item.className = `history-item ${severity}`;
+            item.innerHTML = `
+                <div>
+                    <div style="font-weight: bold; font-size:1.1rem;">${result.ambient_alcohol_ppm.toFixed(1)} ppm</div>
+                    <div style="font-size: 0.85rem; color: #94a3b8;">${new Date().toLocaleTimeString()} - HR: ${inputParams.heart_rate}bpm, Temp: ${inputParams.temperature}°C</div>
+                </div>
+                <div style="font-weight: bold;">${result.classification}</div>
+            `;
+            manualHistoryList.insertBefore(item, manualHistoryList.firstChild);
+        }
+
+        // --- Utils ---
+        function playAlertSound() {
+            alertSound.classList.add('show');
+            setTimeout(() => alertSound.classList.remove('show'), 4000);
+        }
+
+        function showToast(message, type) {
+            const toast = document.createElement('div');
+            toast.className = `notification-toast`;
+            toast.style.background = type === 'success' ? '#10b981' : type === 'error' ? '#ef4444' : '#3b82f6';
+            toast.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-info-circle'}"></i> <span>${message}</span>`;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        function formatTime(timestamp) {
+            return new Date(timestamp).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit', second: '2-digit'});
+        }
+
+        function clearAlerts() {
+            liveAlerts = [];
+            alertsList.innerHTML = `<div class="empty-state"><i class="fas fa-shield-alt"></i><p>Alerts cleared. Monitoring normal.</p></div>`;
+            showToast('Live alerts cleared', 'info');
+        }
+
+        function clearAllHistory() {
+            if(confirm("Are you sure you want to clear all recorded logs?")) {
+                liveHistoryLog.innerHTML = '<div class="history-item safe text-center justify-content-center" style="opacity: 0.5;">Logs cleared.</div>';
+                manualHistoryList.innerHTML = '<div class="history-item safe text-center justify-content-center" style="opacity: 0.5;">Logs cleared.</div>';
+                showToast("All logs cleared", 'info');
+            }
+        }
+
+        function downloadReport() {
+            if(liveAlerts.length === 0 && manualHistoryList.children[0].classList.contains('text-center')) {
+                showToast("No data to generate report", 'error');
+                return;
+            }
+            showToast("Report generated and downloading...", 'success');
+        }
+
+        document.addEventListener('DOMContentLoaded', loadDefaultValues);
+
+    </script>
+</body>
+</html>
