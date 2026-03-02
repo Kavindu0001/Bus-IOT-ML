@@ -12,8 +12,15 @@ from functools import wraps
 import base64
 import random
 
-from config import db_config
-from model_loader import model_loader
+from config import db_config, DEBUG_MATCHING
+from model_loader import (
+    model_loader,
+    MATCH_THRESHOLD as MODEL_MATCH_THRESHOLD,
+    FALLBACK_THRESHOLD,
+    STRONG_MATCH_THRESHOLD,
+    PASS_RATIO_THRESHOLD,
+    MATCH_MARGIN,
+)
 
 # --- ROBUST IMPORT FOR NEW BEHAVIOR ANALYZER ---
 try:
@@ -366,9 +373,24 @@ def capture_entrance_auto():
                 'journey_id': journey_id, 'sequence': i + 1
             })
 
+        # Extract embeddings at entrance time and keep them in session memory.
+        # model_loader returns None safely if the model is not loaded yet.
+        entrance_embeddings = (
+            model_loader.extract_embeddings_batch(image_paths)
+            if model_loader and model_loader.is_ready
+            else []
+        )
+        if not entrance_embeddings:
+            log_event('embedding_warning',
+                      f'No entrance embeddings extracted for passenger {effective_pid}. '
+                      'Model may not be loaded. Storing image paths as fallback.')
+
         active_passengers[effective_pid] = {
-            'journey_id': journey_id, 'entrance_time': datetime.now(),
-            'entrance_images': image_paths, 'name': passenger_name
+            'journey_id': journey_id,
+            'entrance_time': datetime.now(),
+            'entrance_images': image_paths,
+            'embeddings': entrance_embeddings,  # L2-normalised 128-dim vectors (session only)
+            'name': passenger_name
         }
 
         current_bus_turn['passenger_count'] += 1
@@ -436,38 +458,104 @@ def capture_exit_auto():
         if not exit_images_data:
             return jsonify({'error': 'Failed to capture exit images'}), 400
 
-        # --- MATCHING LOGIC ---
-        best_match_id = None
-        best_sim = -1.0
-        best_res = None
+        # --- EMBEDDING-BASED MATCHING LOGIC ---
+        # Step 1: Extract embeddings for ALL exit images (not just the first).
+        if model_loader and model_loader.is_ready:
+            exit_embeddings = model_loader.extract_embeddings_batch(exit_images_data)
+        else:
+            exit_embeddings = []
 
-        query_img = exit_images_data[0]
-
-        for pid, pdata in active_passengers.items():
-            ent_paths = pdata['entrance_images']
-            ent_imgs = [cv2.imread(p) for p in ent_paths if os.path.exists(p)]
-            if not ent_imgs:
-                continue
-
-            res = model_loader.detect_anomaly(ent_imgs, query_img)
-            sim_scores = res.get('similarity_scores', [])
-            avg_sim = sum(sim_scores) / len(sim_scores) if sim_scores else 0.0
-
-            if not sim_scores:
-                avg_sim = random.uniform(0.3, 0.95)
-
-            if avg_sim > best_sim:
-                best_sim = avg_sim
-                best_match_id = pid
-                best_res = res
-
-        MATCH_THRESHOLD = 0.60
-        if best_match_id is None or best_sim < MATCH_THRESHOLD:
+        if not exit_embeddings:
+            # Image decode failed for all exit images (e.g. corrupt JPEG).
+            log_event('embedding_error', 'Failed to extract exit embeddings from captured images.')
             for p in exit_paths_temp:
-                if os.path.exists(p): os.remove(p)
+                if os.path.exists(p):
+                    os.remove(p)
             return jsonify({
                 'match_found': False,
-                'result_text': 'ID Unknown - Image - No matching Found'
+                'result_text': 'ID Unknown - Image - No matching Found',
+                'message': 'Could not process exit images. Please retake the photos.'
+            }), 200
+
+        best_match_id   = None
+        best_sim        = -1.0
+        second_best_sim = -1.0
+        best_res        = None
+
+        # Step 2: Compare exit embeddings against every active passenger's entrance embeddings.
+        for pid, pdata in active_passengers.items():
+            entrance_embeddings = pdata.get('embeddings', [])
+
+            # Fallback: re-extract from saved image paths if embeddings weren't stored
+            if not entrance_embeddings:
+                ent_paths = pdata.get('entrance_images', [])
+                if model_loader and model_loader.is_ready and ent_paths:
+                    entrance_embeddings = model_loader.extract_embeddings_batch(
+                        [p for p in ent_paths if os.path.exists(p)]
+                    )
+
+            if not entrance_embeddings:
+                # No usable entrance data for this passenger — skip (treat as no match)
+                continue
+
+            res     = model_loader.detect_anomaly(entrance_embeddings, exit_embeddings)
+            avg_sim = res.get('avg_similarity', 0.0)
+
+            if DEBUG_MATCHING:
+                print(f"[MATCH] pid={pid:>4s}  sim={avg_sim:.4f}  "
+                      f"max={res.get('max_similarity',0):.4f}  "
+                      f"ratio={res.get('pass_ratio',0):.2f}  "
+                      f"threshold={MODEL_MATCH_THRESHOLD:.2f}  status={res.get('status', '?')}")
+
+            if avg_sim > best_sim:
+                second_best_sim = best_sim
+                best_sim        = avg_sim
+                best_match_id   = pid
+                best_res        = res
+            elif avg_sim > second_best_sim:
+                second_best_sim = avg_sim
+
+        # Step 3: 4-rule strict match gate.
+        _margin     = best_sim - second_best_sim
+        _max_sim    = best_res.get('max_similarity', 0.0) if best_res else 0.0
+        _pass_ratio = best_res.get('pass_ratio', 0.0)    if best_res else 0.0
+        _rule1 = best_match_id is not None and best_sim >= MODEL_MATCH_THRESHOLD
+        _rule2 = _max_sim    >= STRONG_MATCH_THRESHOLD
+        _rule3 = _pass_ratio >= PASS_RATIO_THRESHOLD
+        _rule4 = _margin     >= MATCH_MARGIN
+        _match_accepted = _rule1 and _rule2 and _rule3 and _rule4
+
+        if DEBUG_MATCHING:
+            print(f"[MATCH] best_id={best_match_id}  best_sim={best_sim:.4f}  "
+                  f"second={second_best_sim:.4f}  margin={_margin:.4f}")
+            print(f"[MATCH] rules  R1(avg>={MODEL_MATCH_THRESHOLD})={_rule1}  "
+                  f"R2(max>={STRONG_MATCH_THRESHOLD})={_rule2}  "
+                  f"R3(ratio>={PASS_RATIO_THRESHOLD})={_rule3}  "
+                  f"R4(margin>={MATCH_MARGIN})={_rule4}  => {'ACCEPTED' if _match_accepted else 'REJECTED'}")
+
+        if not _match_accepted:
+            for p in exit_paths_temp:
+                if os.path.exists(p): os.remove(p)
+            _reject_reason = (
+                'avg_similarity below threshold' if not _rule1 else
+                'max_similarity too low (STRONG_MATCH failed)' if not _rule2 else
+                'pass_ratio too low (inconsistent pairs)' if not _rule3 else
+                'margin too small (ambiguous match)'
+            )
+            # active_passengers is non-empty here (checked at top), so this is a MISMATCH
+            return jsonify({
+                'match_found':    False,
+                'status':         'MISMATCH',
+                'message':        'Mismatch Detected',
+                'result_text':    'Mismatch Detected',
+                'reject_reason':  _reject_reason,
+                'similarity':     round(best_sim, 4) if best_sim >= 0 else 0.0,
+                'avg_similarity': round(best_sim, 4) if best_sim >= 0 else None,
+                'max_similarity': round(_max_sim, 4),
+                'pass_ratio':     round(_pass_ratio, 3),
+                'margin':         round(_margin, 4),
+                'threshold':      MODEL_MATCH_THRESHOLD,
+                'threshold_used': MODEL_MATCH_THRESHOLD,
             }), 200
 
         # --- MATCH FOUND: Process Exit ---
@@ -481,8 +569,10 @@ def capture_exit_auto():
             os.rename(temp_p, final_p)
             exit_paths_final.append(final_p)
 
-        is_anomaly_bool = bool(best_res.get('is_anomaly', False))
-        final_confidence_float = float(best_res.get('confidence', 0.85))
+        is_anomaly_bool        = bool(best_res.get('is_anomaly', False))
+        final_confidence_float = float(best_res.get('avg_similarity', 0.0))
+        _exit_max_sim    = float(best_res.get('max_similarity', 0.0))
+        _exit_pass_ratio = float(best_res.get('pass_ratio', 0.0))
 
         for i, exit_path in enumerate(exit_paths_final):
             db_config.db.images.insert_one({
@@ -525,8 +615,16 @@ def capture_exit_auto():
         current_bus_turn['passenger_count'] -= 1
 
         log_event('passenger_exited', f'Passenger {passenger_id} exited', {
-            'passenger_id': passenger_id, 'anomaly': is_anomaly_bool,
-            'confidence': final_confidence_float, 'travel_time': travel_time
+            'passenger_id':   passenger_id,
+            'anomaly':        is_anomaly_bool,
+            'avg_similarity': round(final_confidence_float, 4),
+            'max_similarity': round(_exit_max_sim, 4),
+            'pass_ratio':     round(_exit_pass_ratio, 3),
+            'best_sim':       round(best_sim, 4),
+            'second_best':    round(second_best_sim, 4),
+            'margin':         round(_margin, 4),
+            'threshold':      MODEL_MATCH_THRESHOLD,
+            'travel_time':    travel_time,
         })
 
         socketio.emit('passenger_exit', {
@@ -543,17 +641,601 @@ def capture_exit_auto():
             result_txt = f"ID {passenger_id} - Image - No Anomaly Detected"
 
         return jsonify({
-            'success': True,
-            'match_found': True,
-            'passenger_id': passenger_id,
-            'anomaly': is_anomaly_bool,
-            'confidence': final_confidence_float,
-            'active_count': current_bus_turn['passenger_count'],
-            'result_text': result_txt
+            'success':          True,
+            'match_found':      True,
+            'passenger_id':     passenger_id,
+            'anomaly':          is_anomaly_bool,
+            'confidence':       final_confidence_float,
+            'active_count':     current_bus_turn['passenger_count'],
+            'result_text':      result_txt,
+            # ── matching metadata ──
+            'match_status':     best_res.get('status', 'MATCH'),
+            'avg_similarity':   round(final_confidence_float, 4),
+            'max_similarity':   round(_exit_max_sim, 4),
+            'pass_ratio':       round(_exit_pass_ratio, 3),
+            'similarity_pct':   round(final_confidence_float * 100, 1),
+            'best_sim':         round(best_sim, 4),
+            'second_best_sim':  round(second_best_sim, 4),
+            'margin':           round(_margin, 4),
+            'threshold_used':   MODEL_MATCH_THRESHOLD,
+            'model_backend':    'Histogram' if (model_loader and model_loader.using_fallback) else 'TFLite',
         })
     except Exception as e:
         log_event('exit_error', f'Error processing auto exit: {str(e)}')
         return jsonify({'error': str(e)}), 500
+
+
+# ==============================================================================
+# RAM-ONLY PASSENGER RE-IDENTIFICATION API
+# ==============================================================================
+# These routes implement a pure in-memory passenger flow:
+#
+#   POST /api/passenger/enter   — decode base64 images → extract embeddings
+#                                  → store under a new UUID in active_passengers
+#
+#   POST /api/passenger/exit    — decode base64 images → extract embeddings
+#                                  → compare against ALL active passengers
+#                                  → return best match + anomaly decision
+#                                  → remove matched passenger from memory
+#
+#   POST /api/passenger/exit/<passenger_uuid>
+#                               — same as above but match against ONE specific
+#                                  passenger (useful if UUID is known at exit)
+#
+#   GET  /api/passenger/active  — list all in-memory passengers (debug / UI)
+#
+#   POST /api/bus/end_turn      — clear entire active_passengers dict
+#
+# Data never touches disk.  Embeddings are numpy float32 arrays in RAM only.
+# Active passenger dict is wiped automatically on end_journey() as well.
+# ==============================================================================
+
+# ─── helpers ────────────────────────────────────────────────────────────────
+
+def _decode_b64_images(form_field: str) -> list:
+    """
+    Decode a JSON-encoded list of base64 image strings from a form field.
+
+    Accepts both  'data:image/jpeg;base64,<data>'  and  plain '<data>'  strings.
+
+    Returns a list of BGR numpy arrays (decoded with cv2.imdecode).
+    Silently skips any entry that cannot be decoded — caller checks length.
+    """
+    frames = []
+    raw = request.form.get(form_field)
+    if not raw:
+        return frames
+    try:
+        items = json.loads(raw)
+    except (json.JSONDecodeError, TypeError):
+        # Try treating it as a single base64 string
+        items = [raw]
+
+    for item in items:
+        if not item:
+            continue
+        try:
+            # Strip the data-URI header if present
+            encoded = item.split(',', 1)[1] if ',' in item else item
+            binary  = base64.b64decode(encoded)
+            arr     = np.frombuffer(binary, dtype=np.uint8)
+            img     = cv2.imdecode(arr, cv2.IMREAD_COLOR)  # BGR
+            if img is not None and img.size > 0:
+                frames.append(img)
+        except Exception:
+            pass  # skip corrupt frames silently
+    return frames
+
+
+def _extract_or_fail(frames: list) -> tuple:
+    """
+    Extract embeddings for a list of BGR frames using model_loader.
+
+    Returns (embeddings_list, error_str).
+    embeddings_list is [] and error_str is non-empty on failure.
+    """
+    if not frames:
+        return [], 'No valid frames decoded from the uploaded images.'
+    if model_loader is None:
+        return [], 'model_loader is not initialised.'
+
+    embeddings = model_loader.extract_embeddings_batch(frames)
+    if not embeddings:
+        return [], 'Embedding extraction returned no results. Check image quality.'
+    return embeddings, ''
+
+
+# ─── POST /api/passenger/enter ──────────────────────────────────────────────
+
+@app.route('/api/passenger/enter', methods=['POST'])
+@requires_bus_turn
+def api_passenger_enter():
+    """
+    Register a new passenger at the bus entrance.
+
+    Expected form fields:
+        image_data[]  – JSON-encoded list of 3–5 base64 JPEG strings
+
+    Returns JSON:
+        {
+            "success": true,
+            "passenger_uuid": "a1b2c3...",
+            "embeddings_stored": 5,
+            "active_count": 12,
+            "bus_turn_id": "bus_20260302_...",
+            "timestamp": "2026-03-02T..."
+        }
+    """
+    try:
+        # ── 1. Decode images (RAM only — nothing written to disk) ──────────
+        frames = _decode_b64_images('image_data[]')
+        if not frames:
+            return jsonify({
+                'success': False,
+                'error': 'No images received. Send 3–5 JPEG frames in image_data[].'
+            }), 400
+
+        if len(frames) < 3:
+            return jsonify({
+                'success': False,
+                'error': f'Only {len(frames)} image(s) decoded. Need at least 3 for reliable matching.'
+            }), 400
+
+        # ── 2. Extract embeddings ──────────────────────────────────────────
+        embeddings, err = _extract_or_fail(frames)
+        if err:
+            return jsonify({'success': False, 'error': err}), 422
+
+        # ── 3. Assign UUID and store in RAM ────────────────────────────────
+        passenger_uuid  = str(uuid.uuid4())
+        now             = datetime.now()
+        journey_id      = f"journey_{passenger_uuid[:8]}_{now.strftime('%Y%m%d%H%M%S')}"
+
+        active_passengers[passenger_uuid] = {
+            'passenger_uuid': passenger_uuid,
+            'journey_id':     journey_id,
+            'bus_turn_id':    current_bus_turn['bus_turn_id'],
+            'entrance_time':  now,
+            # L2-normalised numpy arrays — stored in RAM, never on disk
+            'embeddings':     embeddings,
+            'embedding_count': len(embeddings),
+            'status':         'active',
+        }
+
+        # ── 4. Update bus-turn counter ─────────────────────────────────────
+        current_bus_turn['passenger_count'] += 1
+
+        # ── 5. Emit live update to dashboard ──────────────────────────────
+        socketio.emit('passenger_entered', {
+            'passenger_uuid': passenger_uuid,
+            'journey_id':     journey_id,
+            'timestamp':      now.isoformat(),
+            'active_count':   len(active_passengers),
+        })
+
+        log_event('passenger_entered', f'UUID={passenger_uuid[:8]} entered — '
+                  f'{len(embeddings)} embeddings stored.')
+
+        return jsonify({
+            'success':          True,
+            'passenger_uuid':   passenger_uuid,
+            'journey_id':       journey_id,
+            'embeddings_stored': len(embeddings),
+            'active_count':     len(active_passengers),
+            'bus_turn_id':      current_bus_turn['bus_turn_id'],
+            'timestamp':        now.isoformat(),
+            # Hint for the frontend: display short ID to operator
+            'display_id':       passenger_uuid[:8].upper(),
+        })
+
+    except Exception as exc:
+        log_event('enter_error', f'api_passenger_enter error: {exc}')
+        return jsonify({'success': False, 'error': str(exc)}), 500
+
+
+# ─── POST /api/passenger/exit  (scan all passengers) ────────────────────────
+
+@app.route('/api/passenger/exit', methods=['POST'])
+@requires_bus_turn
+def api_passenger_exit():
+    """
+    Process a passenger exit by comparing exit images against ALL active
+    passengers and selecting the best match.
+
+    Expected form fields:
+        image_data[]  – JSON-encoded list of 3–5 base64 JPEG strings
+
+    Returns JSON:
+        {
+            "success": true,
+            "match_found": true,
+            "passenger_uuid": "a1b2c3...",
+            "display_id": "A1B2C3D4",
+            "is_anomaly": false,
+            "avg_similarity": 0.87,
+            "alert_level": "low",
+            "match_confidence": 0.87,
+            "result_text": "ID A1B2C3D4 - Image - No Anomaly Detected",
+            "travel_time_seconds": 312,
+            "active_count": 11
+        }
+    """
+    try:
+        # ── 0. Guard: need active passengers ──────────────────────────────
+        if not active_passengers:
+            return jsonify({
+                'success':     False,
+                'match_found': False,
+                'result_text': 'No active passengers on this bus turn.',
+            }), 200
+
+        # ── 1. Decode exit images (RAM only) ───────────────────────────────
+        frames = _decode_b64_images('image_data[]')
+        if not frames:
+            return jsonify({
+                'success': False,
+                'error': 'No images received. Send 3–5 JPEG frames in image_data[].'
+            }), 400
+
+        # ── 2. Extract exit embeddings ─────────────────────────────────────
+        exit_embeddings, err = _extract_or_fail(frames)
+        if err:
+            # Embedding failure = safe default: treat as no match
+            log_event('exit_embedding_fail', err)
+            return jsonify({
+                'success':     True,
+                'match_found': False,
+                'result_text': 'ID Unknown - Image - No matching Found',
+                'error_detail': err,
+            }), 200
+
+        # ── 3. Compare against every active passenger ──────────────────────
+        best_uuid       = None
+        best_sim        = -1.0
+        second_best_sim = -1.0
+        best_result     = None
+
+        for p_uuid, pdata in active_passengers.items():
+            ent_embs = pdata.get('embeddings', [])
+            if not ent_embs:
+                continue  # no entrance embeddings — skip safely
+
+            res = model_loader.detect_anomaly(ent_embs, exit_embeddings)
+            sim = res.get('avg_similarity', 0.0)
+
+            if sim > best_sim:
+                second_best_sim = best_sim
+                best_sim        = sim
+                best_uuid       = p_uuid
+                best_result     = res
+            elif sim > second_best_sim:
+                second_best_sim = sim
+
+        # ── 4. Threshold decision ──────────────────────────────────────────
+        # Use the threshold that matches the active backend (ML or histogram)
+        active_threshold = (
+            FALLBACK_THRESHOLD
+            if getattr(model_loader, 'using_fallback', False)
+            else MODEL_MATCH_THRESHOLD
+        )
+
+        _margin     = best_sim - second_best_sim
+        _max_sim    = best_result.get('max_similarity', 0.0) if best_result else 0.0
+        _pass_ratio = best_result.get('pass_ratio', 0.0)    if best_result else 0.0
+        _api_r1 = best_uuid is not None and best_sim >= active_threshold
+        _api_r2 = _max_sim    >= STRONG_MATCH_THRESHOLD
+        _api_r3 = _pass_ratio >= PASS_RATIO_THRESHOLD
+        _api_r4 = _margin     >= MATCH_MARGIN
+        _api_match = _api_r1 and _api_r2 and _api_r3 and _api_r4
+
+        if not _api_match:
+            _reject_reason = (
+                'avg_similarity below threshold' if not _api_r1 else
+                'max_similarity too low (STRONG_MATCH failed)' if not _api_r2 else
+                'pass_ratio too low (inconsistent pairs)' if not _api_r3 else
+                'margin too small (ambiguous match)'
+            )
+            return jsonify({
+                'success':        True,
+                'match_found':    False,
+                'best_sim':       round(best_sim, 4) if best_sim >= 0 else None,
+                'max_similarity': round(_max_sim, 4),
+                'pass_ratio':     round(_pass_ratio, 3),
+                'margin':         round(_margin, 4),
+                'threshold':      active_threshold,
+                'reject_reason':  _reject_reason,
+                'result_text':    'ID Unknown - Image - No matching Found',
+            }), 200
+
+        confidence   = float(best_result.get('avg_similarity', best_sim))
+        exit_time    = datetime.now()
+        travel_secs  = int((exit_time - pdata['entrance_time']).total_seconds())
+        display_id   = best_uuid[:8].upper()
+
+        result_text = (
+            f"ID {display_id} - Image - Anomaly Detected"
+            if is_anomaly
+            else f"ID {display_id} - Image - No Anomaly Detected"
+        )
+
+        # ── 6. Remove passenger from RAM (session over for this person) ────
+        del active_passengers[best_uuid]
+        current_bus_turn['passenger_count'] = max(0, current_bus_turn['passenger_count'] - 1)
+        if is_anomaly:
+            current_bus_turn['anomaly_count'] += 1
+
+        # ── 7. Emit live update ────────────────────────────────────────────
+        socketio.emit('passenger_exit', {
+            'passenger_uuid': best_uuid,
+            'display_id':     display_id,
+            'is_anomaly':     is_anomaly,
+            'avg_similarity': round(best_sim, 4),
+            'alert_level':    alert_level,
+            'travel_time':    travel_secs,
+            'timestamp':      exit_time.isoformat(),
+            'active_count':   len(active_passengers),
+        })
+
+        log_event('passenger_exited',
+                  f'UUID={best_uuid[:8]} exited — sim={best_sim:.3f} '
+                  f'anomaly={is_anomaly} travel={travel_secs}s', {
+                      'avg_similarity': round(best_sim, 4),
+                      'max_similarity': round(_max_sim, 4),
+                      'pass_ratio':     round(_pass_ratio, 3),
+                      'best_sim':       round(best_sim, 4),
+                      'second_best':    round(second_best_sim, 4),
+                      'margin':         round(_margin, 4),
+                      'threshold':      active_threshold,
+                  })
+
+        return jsonify({
+            'success':            True,
+            'match_found':        True,
+            'passenger_uuid':     best_uuid,
+            'journey_id':         pdata.get('journey_id'),
+            'display_id':         display_id,
+            'is_anomaly':         is_anomaly,
+            'avg_similarity':     round(best_sim, 4),
+            'max_similarity':     round(_max_sim, 4),
+            'pass_ratio':         round(_pass_ratio, 3),
+            'similarity_scores':  [round(s, 4) for s in best_result.get('similarity_scores', [])],
+            'alert_level':        alert_level,
+            'match_confidence':   round(confidence, 4),
+            'threshold_used':     active_threshold,
+            'best_sim':           round(best_sim, 4),
+            'second_best_sim':    round(second_best_sim, 4),
+            'margin':             round(_margin, 4),
+            'result_text':        result_text,
+            'travel_time_seconds': travel_secs,
+            'active_count':        len(active_passengers),
+            'timestamp':           exit_time.isoformat(),
+        })
+
+    except Exception as exc:
+        log_event('exit_error', f'api_passenger_exit error: {exc}')
+        return jsonify({'success': False, 'error': str(exc)}), 500
+
+
+# ─── POST /api/passenger/exit/<passenger_uuid>  (match one specific person) ─
+
+@app.route('/api/passenger/exit/<passenger_uuid>', methods=['POST'])
+@requires_bus_turn
+def api_passenger_exit_by_id(passenger_uuid):
+    """
+    Compare exit images against ONE known passenger UUID.
+
+    Useful when the operator scans a ticket / QR code at exit and already
+    knows which passenger should be leaving.
+
+    Returns the same JSON shape as POST /api/passenger/exit.
+    """
+    try:
+        if passenger_uuid not in active_passengers:
+            return jsonify({
+                'success':     False,
+                'match_found': False,
+                'result_text': f'UUID {passenger_uuid[:8]} not found in active passengers.',
+            }), 404
+
+        frames = _decode_b64_images('image_data[]')
+        exit_embeddings, err = _extract_or_fail(frames)
+        if err:
+            return jsonify({
+                'success':     True,
+                'match_found': False,
+                'result_text': 'ID Unknown - Image - No matching Found',
+                'error_detail': err,
+            }), 200
+
+        pdata    = active_passengers[passenger_uuid]
+        ent_embs = pdata.get('embeddings', [])
+
+        if not ent_embs:
+            return jsonify({
+                'success': False,
+                'error':   'No entrance embeddings stored for this passenger.',
+            }), 422
+
+        result      = model_loader.detect_anomaly(ent_embs, exit_embeddings)
+        avg_sim     = float(result.get('avg_similarity', 0.0))
+        max_sim     = float(result.get('max_similarity', 0.0))
+        pass_ratio  = float(result.get('pass_ratio', 0.0))
+        alert_level = result.get('alert_level', 'high')
+
+        # Rules 1-3 (no margin: only one candidate for targeted exit)
+        _t_threshold  = (
+            FALLBACK_THRESHOLD if getattr(model_loader, 'using_fallback', False)
+            else MODEL_MATCH_THRESHOLD
+        )
+        _t_r1 = avg_sim    >= _t_threshold
+        _t_r2 = max_sim    >= STRONG_MATCH_THRESHOLD
+        _t_r3 = pass_ratio >= PASS_RATIO_THRESHOLD
+        _t_match = _t_r1 and _t_r2 and _t_r3
+
+        if not _t_match:
+            _t_reason = (
+                'avg_similarity below threshold' if not _t_r1 else
+                'max_similarity too low' if not _t_r2 else
+                'pass_ratio too low'
+            )
+            log_event('exit_mismatch',
+                      f'UUID={passenger_uuid[:8]} targeted exit REJECTED — {_t_reason}', {
+                          'avg_similarity': round(avg_sim, 4),
+                          'max_similarity': round(max_sim, 4),
+                          'pass_ratio':     round(pass_ratio, 3),
+                          'threshold':      _t_threshold,
+                      })
+            return jsonify({
+                'success':        True,
+                'match_found':    False,
+                'result_text':    f'ID {passenger_uuid[:8].upper()} - Appearance Mismatch Detected',
+                'reject_reason':  _t_reason,
+                'avg_similarity': round(avg_sim, 4),
+                'max_similarity': round(max_sim, 4),
+                'pass_ratio':     round(pass_ratio, 3),
+                'threshold_used': _t_threshold,
+            }), 200
+
+        is_anomaly  = bool(result.get('is_anomaly', False))
+        confidence  = float(result.get('avg_similarity', avg_sim))
+        exit_time   = datetime.now()
+        travel_secs = int((exit_time - pdata['entrance_time']).total_seconds())
+        display_id  = passenger_uuid[:8].upper()
+
+        result_text = (
+            f"ID {display_id} - Image - Anomaly Detected"
+            if is_anomaly
+            else f"ID {display_id} - Image - No Anomaly Detected"
+        )
+
+        # Remove from RAM
+        del active_passengers[passenger_uuid]
+        current_bus_turn['passenger_count'] = max(0, current_bus_turn['passenger_count'] - 1)
+        if is_anomaly:
+            current_bus_turn['anomaly_count'] += 1
+
+        socketio.emit('passenger_exit', {
+            'passenger_uuid': passenger_uuid,
+            'display_id':     display_id,
+            'is_anomaly':     is_anomaly,
+            'avg_similarity': round(avg_sim, 4),
+            'alert_level':    alert_level,
+            'travel_time':    travel_secs,
+            'timestamp':      exit_time.isoformat(),
+            'active_count':   len(active_passengers),
+        })
+
+        log_event('passenger_exited',
+                  f'UUID={passenger_uuid[:8]} (targeted) exited — '
+                  f'sim={avg_sim:.3f} anomaly={is_anomaly}', {
+                      'avg_similarity': round(avg_sim, 4),
+                      'max_similarity': round(max_sim, 4),
+                      'pass_ratio':     round(pass_ratio, 3),
+                      'threshold':      _t_threshold,
+                  })
+
+        return jsonify({
+            'success':            True,
+            'match_found':        True,
+            'passenger_uuid':     passenger_uuid,
+            'journey_id':         pdata.get('journey_id'),
+            'display_id':         display_id,
+            'is_anomaly':         is_anomaly,
+            'avg_similarity':     round(avg_sim, 4),
+            'max_similarity':     round(max_sim, 4),
+            'pass_ratio':         round(pass_ratio, 3),
+            'similarity_scores':  [round(s, 4) for s in result.get('similarity_scores', [])],
+            'alert_level':        alert_level,
+            'match_confidence':   round(confidence, 4),
+            'threshold_used':     _t_threshold,
+            'result_text':        result_text,
+            'travel_time_seconds': travel_secs,
+            'active_count':        len(active_passengers),
+            'timestamp':           exit_time.isoformat(),
+        })
+
+    except Exception as exc:
+        log_event('exit_error', f'api_passenger_exit_by_id error: {exc}')
+        return jsonify({'success': False, 'error': str(exc)}), 500
+
+
+# ─── GET /api/passenger/active ───────────────────────────────────────────────
+
+@app.route('/api/passenger/active', methods=['GET'])
+def api_active_passengers_detail():
+    """
+    Return a summary of all passengers currently in RAM.
+
+    Each entry shows the UUID, display ID, journey ID, boarding time,
+    how many embeddings are stored, and elapsed time on the bus.
+    """
+    now     = datetime.now()
+    summary = []
+    for p_uuid, pdata in active_passengers.items():
+        elapsed = int((now - pdata['entrance_time']).total_seconds())
+        summary.append({
+            'passenger_uuid':  p_uuid,
+            'display_id':      p_uuid[:8].upper(),
+            'journey_id':      pdata.get('journey_id'),
+            'bus_turn_id':     pdata.get('bus_turn_id'),
+            'entrance_time':   pdata['entrance_time'].isoformat(),
+            'elapsed_seconds': elapsed,
+            'embeddings_stored': pdata.get('embedding_count', len(pdata.get('embeddings', []))),
+            'status':          pdata.get('status', 'active'),
+        })
+
+    return jsonify({
+        'active_count': len(summary),
+        'passengers':   summary,
+        'bus_turn_id':  current_bus_turn['bus_turn_id'] if current_bus_turn else None,
+        'timestamp':    now.isoformat(),
+    })
+
+
+# ─── POST /api/bus/end_turn ───────────────────────────────────────────────────
+
+@app.route('/api/bus/end_turn', methods=['POST'])
+def api_bus_end_turn():
+    """
+    Clear all in-memory passenger state for the current bus turn.
+
+    Call this when the bus completes its route and all passengers should
+    have exited.  Any passengers still in active_passengers are logged as
+    'did not exit' and then cleared.
+
+    This is INDEPENDENT of end_journey() (which also clears the dict) —
+    you can call either one depending on your frontend flow.
+    """
+    global current_bus_turn
+    try:
+        remaining = list(active_passengers.keys())
+        count     = len(remaining)
+
+        if remaining:
+            log_event('bus_turn_force_clear',
+                      f'{count} passenger(s) still in RAM at turn end: '
+                      + ', '.join(p[:8] for p in remaining))
+
+        # Wipe all session embeddings from RAM
+        active_passengers.clear()
+
+        if current_bus_turn:
+            current_bus_turn['active'] = False
+
+        socketio.emit('bus_turn_cleared', {
+            'cleared_count': count,
+            'timestamp':     datetime.now().isoformat(),
+        })
+
+        return jsonify({
+            'success':         True,
+            'cleared_count':   count,
+            'did_not_exit':    [p[:8].upper() for p in remaining],
+            'timestamp':       datetime.now().isoformat(),
+        })
+
+    except Exception as exc:
+        return jsonify({'success': False, 'error': str(exc)}), 500
 
 
 # ==================== RESULT & DASHBOARD ====================

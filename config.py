@@ -211,3 +211,8 @@ class MongoDBConfig:
 
 # Global MongoDB instance
 db_config = MongoDBConfig()
+
+# ── Matching debug flag ──────────────────────────────────────────────────────
+# True  → print per-passenger similarity details during exit matching.
+# False → suppress all matching debug output (use in production).
+DEBUG_MATCHING = True
