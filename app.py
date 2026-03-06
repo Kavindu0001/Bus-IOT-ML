@@ -652,6 +652,11 @@ def driver_behavior():
     return render_template('driver_behavior.html')
 
 
+@app.route('/other')
+def other():
+    return render_template('other.html')
+
+
 @app.route('/api/driver_scores')
 def get_driver_scores():
     try:
