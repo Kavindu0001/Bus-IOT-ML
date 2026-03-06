@@ -1,0 +1,54 @@
+{
+  "input_specification": {
+    "shape": [
+      64,
+      64,
+      3
+    ],
+    "dtype": "float32",
+    "normalization": "divide_by_255",
+    "standardization": "subtract_0.5",
+    "color_space": "RGB"
+  },
+  "output_specification": {
+    "shape": [
+      10
+    ],
+    "dtype": "float32",
+    "interpretation": "softmax_probabilities",
+    "classes": [
+      "c0",
+      "c1",
+      "c2",
+      "c3",
+      "c4",
+      "c5",
+      "c6",
+      "c7",
+      "c8",
+      "c9"
+    ],
+    "confidence_threshold": 0.5
+  },
+  "preprocessing_steps": [
+    "load_image_64x64",
+    "convert_to_array",
+    "normalize_255",
+    "standardize_minus_0.5",
+    "expand_dims"
+  ],
+  "essential_files": [
+    "best_model/vgg16_transfer_model.keras",
+    "best_model/confusion_matrix.png",
+    "best_model/ensemble_config.json",
+    "best_model/metadata.json",
+    "best_model/training_history.png",
+    "best_model/class_wise_accuracy.png",
+    "best_model/ensemble_simple_cnn.keras",
+    "best_model/performance_summary.json",
+    "best_model/ensemble_dense.keras",
+    "best_model/confusion_matrix_normalized.png",
+    "best_model/label_encoder.pkl",
+    "best_model/scaler_info.json"
+  ]
+}
