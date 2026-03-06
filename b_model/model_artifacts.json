@@ -97,16 +97,16 @@
     ]
   },
   "accuracy_analysis": {
-    "final_model_accuracy": 0.9433667781493869,
-    "accuracy_interpretation": "Good",
+    "final_model_accuracy": 0.6538880418209541,
+    "accuracy_interpretation": "Needs improvement",
     "comparison_with_baselines": {
       "random_guess_accuracy": 0.1,
-      "improvement_over_random": 0.8433667781493869
+      "improvement_over_random": 0.5538880418209541
     },
     "key_metrics": {
-      "precision": 0.9437492249654073,
-      "recall": 0.9433667781493869,
-      "f1_score": 0.9432957448856324
+      "precision": 0.32618187573151575,
+      "recall": 0.2918754084077543,
+      "f1_score": 0.2835046067661613
     },
     "confusion_matrix_insights": "Main confusions between visually similar distraction classes"
   },

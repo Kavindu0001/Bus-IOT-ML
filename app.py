@@ -120,6 +120,9 @@ def camera_feed_generator():
                         # If it's an anomaly, count it and emit event
                         if behavior_res['is_anomaly']:
                             current_bus_turn['driver_anomaly_count'] += 1
+                            current_bus_turn['driver_live_score'] = max(
+                                0, 100 - current_bus_turn['driver_anomaly_count'] * 2
+                            )
                             log_event('driver_behavior_anomaly', f"Detected: {behavior_res['behavior']}", behavior_res)
 
                         # Emit to frontend for UI updates
@@ -127,6 +130,7 @@ def camera_feed_generator():
                             'behavior': behavior_res['behavior'],
                             'confidence': behavior_res['confidence'],
                             'is_anomaly': behavior_res['is_anomaly'],
+                            'live_score': current_bus_turn.get('driver_live_score', 100),
                             'timestamp': datetime.now().isoformat()
                         })
                     except Exception as e:
@@ -228,6 +232,7 @@ def start_journey():
         'passenger_count': 0,
         'anomaly_count': 0,
         'driver_anomaly_count': 0,  # Added for driver behavior scoring
+        'driver_live_score': 100,   # Live score decreases with each anomaly
         'end_time': None
     }
     log_event('journey_started', f'Bus turn {bus_turn_id} started')
@@ -1666,6 +1671,6 @@ if __name__ == '__main__':
         log_event('system_start', 'Flask application started')
         os.makedirs('static/Entrance', exist_ok=True)
         os.makedirs('static/Exit', exist_ok=True)
-        socketio.run(app, host='0.0.0.0', port=5002, debug=True, allow_unsafe_werkzeug=True)
+        socketio.run(app, host='0.0.0.0', port=5005, debug=True, allow_unsafe_werkzeug=True)
     else:
         print("Failed to connect to database")

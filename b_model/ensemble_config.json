@@ -1,0 +1,14 @@
+{
+  "component_models": [
+    "VGG16_end2end",
+    "Simple_CNN",
+    "Dense_Model"
+  ],
+  "weights": [
+    0.4,
+    0.3,
+    0.3
+  ],
+  "ensemble_accuracy": 0.6538880418209541,
+  "improvement_over_best": 0.36201261982006905
+}

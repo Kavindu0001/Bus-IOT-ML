@@ -1,0 +1,3 @@
+{
+  "preprocessing": "VGG16 preprocess_input (BGR mean-subtraction)"
+}
