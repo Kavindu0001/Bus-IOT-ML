@@ -1,27 +1,30 @@
 {
-  "model_type": "VGG16_Transfer_Learning",
-  "input_shape": [
-    2,
-    2,
-    512
+  "model_type": "VGG16_TransferLearning_FrozenBackbone",
+  "image_input_shape": [
+    128,
+    128,
+    3
   ],
-  "output_shape": [
-    10
-  ],
-  "classes": [
-    "c0",
-    "c1",
-    "c2",
-    "c3",
-    "c4",
-    "c5",
-    "c6",
-    "c7",
-    "c8",
-    "c9"
-  ],
-  "training_samples": 17939,
-  "validation_samples": 4485,
-  "final_val_accuracy": 0.881605327129364,
-  "final_val_loss": 0.44389456510543823
+  "num_classes": 10,
+  "classes": {
+    "0": "c0",
+    "1": "c1",
+    "2": "c2",
+    "3": "c3",
+    "4": "c4",
+    "5": "c5",
+    "6": "c6",
+    "7": "c7",
+    "8": "c8",
+    "9": "c9"
+  },
+  "preprocessing": "VGG16 preprocess_input (BGR mean-subtraction)",
+  "augmentation": "mild (flip, rotation_range=10, shift/zoom=5%)",
+  "optimizer": "Adam lr=1e-4",
+  "training_samples": 17833,
+  "validation_samples": 4591,
+  "final_val_accuracy": 0.24656938016414642,
+  "final_val_loss": 2.5701823234558105,
+  "split_strategy": "driver-held-out (subject column)",
+  "backbone_frozen": true
 }
