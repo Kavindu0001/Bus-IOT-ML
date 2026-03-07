@@ -1,413 +1,735 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Live Dashboard - Anomaly Detection</title>
+{% extends "base.html" %}
+{% block title %}Live Dashboard — Travel Agent Tool{% endblock %}
+{% block page_label %}Dashboard{% endblock %}
 
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+{% block extra_head %}
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<style>
+        /* ══ Variables ══ */
+        :root {
+            --sidebar-w: 260px;
+            --sidebar-bg: #0f172a;
+            --accent:  #3b82f6;
+            --accent2: #10b981;
+            --page-bg: #f1f5f9;
+            --card-r:  16px;
+        }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--page-bg);
+            min-height: 100vh;
+            display: flex;
+            color: #334155;
+        }
 
-    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+        /* ══ SIDEBAR ══ */
+        .sidebar {
+            position: fixed; top: 0; left: 0;
+            width: var(--sidebar-w); height: 100vh;
+            background: var(--sidebar-bg);
+            display: flex; flex-direction: column;
+            z-index: 100; overflow-y: auto;
+        }
+        .sb-brand {
+            padding: 20px 18px 14px;
+            display: flex; align-items: center; gap: 12px;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+        .sb-brand-icon {
+            width: 40px; height: 40px; border-radius: 10px; flex-shrink: 0;
+            background: linear-gradient(135deg, #3b82f6, #6366f1);
+            display: flex; align-items: center; justify-content: center;
+            color: #fff; font-size: 1.1rem;
+        }
+        .sb-brand-text strong { color: #fff; font-size: 0.92rem; display: block; line-height: 1.2; }
+        .sb-brand-text span   { color: rgba(255,255,255,0.4); font-size: 0.7rem; }
 
-    <style>
-        .badge { padding: 2px 8px; border-radius: 12px; font-size: 12px; }
-        .badge.on { background: #d1fae5; color: #065f46; }
-        .badge.off { background: #fee2e2; color: #991b1b; }
-        .updates-log { max-height: 240px; overflow-y: auto; border: 1px solid #eee; border-radius: 6px; padding: 8px; }
-        .update-item { display: flex; gap: 8px; padding: 6px 8px; border-bottom: 1px dashed #eee; }
+        /* Journey status block */
+        .sb-journey-block {
+            padding: 16px 18px 14px;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+        .sb-journey-title {
+            font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.8px;
+            color: rgba(255,255,255,0.35); margin-bottom: 10px;
+        }
+        .sb-journey-badge {
+            display: flex; align-items: center; gap: 8px;
+            border-radius: 9px; padding: 8px 12px; margin-bottom: 10px;
+        }
+        .sb-journey-badge.active-turn  { background: rgba(16,185,129,0.12); border: 1px solid rgba(16,185,129,0.25); }
+        .sb-journey-badge.inactive-turn { background: rgba(245,158,11,0.12); border: 1px solid rgba(245,158,11,0.25); }
+        .sb-pulse-green { width: 8px; height: 8px; border-radius: 50%; background: #10b981; flex-shrink: 0; animation: pulse-dot 2s infinite; }
+        .sb-pulse-yellow { width: 8px; height: 8px; border-radius: 50%; background: #f59e0b; flex-shrink: 0; animation: pulse-dot 2s infinite; }
+        @keyframes pulse-dot { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
+        .sb-journey-badge.active-turn  span { color: #6ee7b7; font-size: 0.78rem; font-weight: 600; }
+        .sb-journey-badge.inactive-turn span { color: #fcd34d; font-size: 0.78rem; font-weight: 600; }
+        .sb-mini-stats {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 7px;
+        }
+        .sb-mini-stat {
+            background: rgba(255,255,255,0.05); border-radius: 9px;
+            padding: 7px 9px; text-align: center;
+        }
+        .sb-mini-stat .msv { color: #fff; font-size: 0.77rem; font-weight: 600; }
+        .sb-mini-stat .msl { color: rgba(255,255,255,0.38); font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 1px; }
+
+        /* Nav */
+        .sb-nav { padding: 14px 12px; flex: 1; }
+        .sb-nav-label {
+            font-size: 0.63rem; text-transform: uppercase; letter-spacing: 1px;
+            color: rgba(255,255,255,0.28); padding: 0 8px; margin-bottom: 6px;
+        }
+        .sb-nav-label-spaced { margin-top: 14px; }
+        .sb-btn {
+            display: flex; align-items: center; gap: 11px; width: 100%;
+            padding: 10px 12px; border-radius: 10px; border: none;
+            background: transparent; color: rgba(255,255,255,0.55); font-size: 0.83rem;
+            cursor: pointer; transition: all 0.18s; margin-bottom: 3px; text-align: left;
+        }
+        .sb-btn:hover { background: rgba(255,255,255,0.07); color: #fff; }
+        .sb-btn.active { background: rgba(59,130,246,0.18); color: #fff; font-weight: 600; }
+        .sb-btn.active .sb-btn-icon { background: var(--accent); color: #fff; }
+        .sb-btn-icon {
+            width: 30px; height: 30px; border-radius: 7px; flex-shrink: 0;
+            background: rgba(255,255,255,0.08);
+            display: flex; align-items: center; justify-content: center; font-size: 0.82rem;
+            transition: background 0.18s;
+        }
+        .sb-footer { padding: 10px 12px 16px; border-top: 1px solid rgba(255,255,255,0.06); }
+        .sb-btn-sm { font-size: 0.78rem; }
+        .sb-btn-icon-green  { background: rgba(16,185,129,0.15); color: #10b981; }
+        .sb-btn-icon-red    { background: rgba(239,68,68,0.15);  color: #ef4444; }
+
+        /* ══ MAIN ══ */
+        .main { margin-left: var(--sidebar-w); flex: 1; min-width: 0; padding: 26px 26px 60px; }
+
+        /* Page header */
+        .pg-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 22px; }
+        .pg-title h2 { font-size: 1.35rem; font-weight: 700; color: #1e293b; margin-bottom: 2px; }
+        .pg-title p  { color: #64748b; font-size: 0.82rem; }
+        .pg-actions { display: flex; gap: 9px; align-items: center; }
+
+        /* Live pill */
+        .live-pill {
+            display: inline-flex; align-items: center; gap: 6px;
+            background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.25);
+            padding: 6px 14px; border-radius: 99px; font-size: 0.78rem; color: #059669; font-weight: 600;
+        }
+        .live-dot { width: 7px; height: 7px; border-radius: 50%; background: #10b981; animation: pulse-dot 2s infinite; }
+
+        /* KPI row */
+        .kpi-row { display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; margin-bottom: 22px; }
+        .kpi-c {
+            background: #fff; border-radius: var(--card-r); padding: 16px 18px;
+            box-shadow: 0 1px 5px rgba(0,0,0,0.05);
+            display: flex; align-items: center; gap: 13px; transition: box-shadow 0.2s;
+        }
+        .kpi-c:hover { box-shadow: 0 5px 18px rgba(0,0,0,0.09); }
+        .kpi-ic {
+            width: 46px; height: 46px; border-radius: 12px; flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center; font-size: 1.1rem;
+        }
+        .kpi-ic.blue   { background: #eff6ff; color: var(--accent); }
+        .kpi-ic.green  { background: #f0fdf4; color: var(--accent2); }
+        .kpi-ic.yellow { background: #fefce8; color: #ca8a04; }
+        .kpi-ic.red    { background: #fef2f2; color: #ef4444; }
+        .kpi-body .kv  { font-size: 1.2rem; font-weight: 700; color: #1e293b; line-height: 1; }
+        .kpi-body .kl  { font-size: 0.7rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.6px; margin-top: 3px; }
+
+        /* Dashboard grid */
+        .dash-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 18px; }
+        .dash-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 18px; margin-bottom: 18px; }
+
+        /* Card */
+        .pc { background: #fff; border-radius: var(--card-r); box-shadow: 0 1px 5px rgba(0,0,0,0.05); overflow: hidden; }
+        .pc-hdr { padding: 14px 18px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid #f1f5f9; }
+        .pc-hdr-ic { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; }
+        .pc-hdr-ic-blue   { background: #eff6ff; color: var(--accent); }
+        .pc-hdr-ic-green  { background: #f0fdf4; color: var(--accent2); }
+        .pc-hdr-ic-yellow { background: #fefce8; color: #ca8a04; }
+        .pc-hdr-ic-red    { background: #fef2f2; color: #ef4444; }
+        .pc-hdr-ic-purple { background: #f5f3ff; color: #7c3aed; }
+        .pc-hdr h5 { font-size: 0.9rem; font-weight: 700; color: #1e293b; margin: 0; }
+        .pc-hdr .pc-hdr-right { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+        .pc-body { padding: 18px; }
+
+        /* Status badge */
+        .bp { padding: 3px 10px; border-radius: 99px; font-size: 0.67rem; font-weight: 700; }
+        .bp-active  { background: #d1fae5; color: #065f46; }
+        .bp-idle    { background: #fef3c7; color: #92400e; }
+
+        /* Info rows (bus turn detail) */
+        .info-row {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 8px 0; border-bottom: 1px solid #f1f5f9; font-size: 0.82rem;
+        }
+        .info-row:last-of-type { border-bottom: none; }
+        .info-label { color: #64748b; }
+        .info-value { font-weight: 600; color: #1e293b; }
+        .status-badge { display: inline-block; padding: 3px 10px; border-radius: 99px; font-size: 0.67rem; font-weight: 700; }
+        .status-badge.active  { background: #d1fae5; color: #065f46; }
+
+        /* Action buttons */
+        .abt {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 9px 16px; border: none; border-radius: 9px;
+            font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: all 0.18s;
+        }
+        .abt:hover { filter: brightness(1.06); transform: translateY(-1px); }
+        .abt.green  { background: linear-gradient(135deg, #10b981, #059669); color: #fff; }
+        .abt.red    { background: linear-gradient(135deg, #ef4444, #dc2626); color: #fff; }
+        .abt.blue   { background: linear-gradient(135deg, #3b82f6, #6366f1); color: #fff; }
+        .abt.ghost  { background: #fff; color: #475569; border: 1.5px solid #e2e8f0; }
+        .abt.w-full { width: 100%; justify-content: center; }
+        .abt[disabled] { opacity: .55; cursor: not-allowed; transform: none; filter: none; }
+
+        /* Stats grid (statistics card) */
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .stat-item {
+            background: #f8fafc; border-radius: 12px; padding: 14px;
+            text-align: center; border: 1px solid #f1f5f9;
+        }
+        .stat-value { font-size: 1.6rem; font-weight: 800; color: #1e293b; line-height: 1; }
+        .stat-label { font-size: 0.67rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.6px; margin-top: 4px; }
+
+        /* Alert items */
+        .alerts-list { max-height: 240px; overflow-y: auto; }
+        .alert-item {
+            display: flex; gap: 10px; padding: 9px 0;
+            border-bottom: 1px solid #f1f5f9; align-items: flex-start;
+        }
+        .alert-item:last-child { border-bottom: none; }
+        .alert-icon {
+            width: 28px; height: 28px; border-radius: 7px; flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center; font-size: 0.78rem;
+        }
+        .alert-anomaly .alert-icon { background: #fef2f2; color: #ef4444; }
+        .alert-normal  .alert-icon { background: #f0fdf4; color: var(--accent2); }
+        .alert-content { flex: 1; min-width: 0; }
+        .alert-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px; }
+        .alert-passenger { font-size: 0.8rem; font-weight: 600; color: #1e293b; }
+        .alert-time { font-size: 0.7rem; color: #94a3b8; }
+        .alert-details { font-size: 0.75rem; color: #64748b; }
+        .alert-confidence { color: #94a3b8; }
+        .alerts-empty { text-align: center; padding: 24px; color: #94a3b8; font-size: 0.8rem; }
+
+        /* System status indicators */
+        .status-list { display: flex; flex-direction: column; gap: 10px; }
+        .status-item { display: flex; align-items: center; gap: 10px; font-size: 0.82rem; }
+        .status-indicator { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+        .status-indicator.active { background: #10b981; }
+        .status-indicator.error  { background: #ef4444; }
+        .status-label { color: #64748b; flex: 1; }
+        .status-text  { font-weight: 600; color: #1e293b; }
+
+        /* Quick actions */
+        .quick-actions-list { display: flex; flex-direction: column; gap: 8px; }
+        .action-btn {
+            display: flex; align-items: center; gap: 9px;
+            padding: 10px 12px; border: 1.5px solid #e2e8f0; border-radius: 10px;
+            background: #fff; color: #475569; font-size: 0.82rem; font-weight: 500;
+            cursor: pointer; transition: all 0.18s;
+        }
+        .action-btn:hover { background: #f8fafc; border-color: var(--accent); color: #1e293b; }
+        .action-btn i { color: var(--accent); width: 16px; text-align: center; }
+
+        /* Real-time updates */
+        .updates-log {
+            max-height: 240px; overflow-y: auto;
+            border-radius: 10px; border: 1px solid #f1f5f9;
+        }
+        .update-item {
+            display: flex; gap: 10px; padding: 8px 12px;
+            border-bottom: 1px solid #f8fafc; font-size: 0.78rem;
+            align-items: center;
+        }
         .update-item:last-child { border-bottom: none; }
         .update-anomaly { background: #fff7ed; }
-        .update-normal { background: #f0fdf4; }
-        .update-time { color: #6b7280; min-width: 74px; display: inline-block; }
-        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.4); align-items: center; justify-content: center; z-index: 1050; }
-        .modal-content { background: #fff; padding: 16px; border-radius: 8px; width: 90%; max-width: 420px; }
-        .form-group { margin: 12px 0; }
-        .form-group input { width: 100%; padding: 8px; border: 1px solid #e5e7eb; border-radius: 6px; }
-        .modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
-        .btn-small { padding: 6px 10px; font-size: 12px; }
-        .no-turn p { margin: 8px 0; }
-        .btn[disabled] { opacity: .6; cursor: not-allowed; }
+        .update-normal  { background: #f0fdf4; }
+        .update-time { color: #94a3b8; min-width: 72px; font-size: 0.72rem; }
+        .update-text { color: #334155; }
+        .updates-empty { text-align: center; padding: 24px; color: #94a3b8; font-size: 0.78rem; }
 
-        /* Navbar & System Status Styles */
-        .live-indicator {
-            display: inline-block;
-            width: 10px;
-            height: 10px;
-            background-color: #2ecc71;
-            border-radius: 50%;
-            margin-right: 5px;
-            animation: pulse 2s infinite;
+        /* No-turn state */
+        .no-turn-state {
+            text-align: center; padding: 20px 10px;
         }
-        @keyframes pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.5; }
-            100% { opacity: 1; }
-        }
-        .system-status {
-            font-size: 0.9rem;
-            padding: 0.5rem 1rem;
-            border-radius: 20px;
-            background: rgba(46, 204, 113, 0.1);
-            border: 1px solid rgba(46, 204, 113, 0.3);
-            color: #ecf0f1;
-        }
+        .no-turn-state .nt-icon { font-size: 2rem; color: #f59e0b; margin-bottom: 10px; }
+        .no-turn-state p { font-size: 0.82rem; color: #64748b; margin-bottom: 14px; }
 
-        /* Footer Styles */
-        footer {
-            margin-top: 3rem;
-            padding: 2rem 0;
-            background: rgba(0,0,0,0.8);
-            color: white;
-            border-radius: 20px 20px 0 0;
+        /* Modal */
+        .modal-bg {
+            display: none; position: fixed; inset: 0;
+            background: rgba(0,0,0,0.45); align-items: center; justify-content: center;
+            z-index: 1050;
+        }
+        .modal-bg.show { display: flex; }
+        .modal-box {
+            background: #fff; border-radius: 16px; width: 90%; max-width: 420px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.18); overflow: hidden;
+        }
+        .modal-hdr {
+            background: linear-gradient(135deg,#0f172a,#1e3a5f); color: #fff;
+            padding: 16px 20px; display: flex; align-items: center; gap: 10px;
+        }
+        .modal-hdr h5 { margin: 0; font-size: 0.92rem; }
+        .modal-bdy { padding: 22px 20px; }
+        .modal-ftr { padding: 0 20px 18px; display: flex; gap: 8px; justify-content: flex-end; }
+        .fg { margin-bottom: 14px; }
+        .fg label { display: block; font-size: 0.72rem; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px; }
+        .fg input {
+            width: 100%; padding: 9px 11px; border: 1.5px solid #e2e8f0; border-radius: 9px;
+            font-size: 0.83rem; color: #1e293b; outline: none;
+            transition: border-color 0.18s, box-shadow 0.18s;
+        }
+        .fg input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
+
+        /* ══ TOASTS ══ */
+        .tc { position: fixed; top: 20px; right: 20px; z-index: 99999; display: flex; flex-direction: column; gap: 7px; }
+        .tm {
+            padding: 11px 16px; border-radius: 10px; font-size: 0.8rem; font-weight: 500;
+            display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 14px rgba(0,0,0,0.1);
+            animation: tslide 0.28s ease;
+        }
+        @keyframes tslide { from { transform: translateX(50px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        .tm.success { background: #ecfdf5; color: #065f46; border-left: 4px solid var(--accent2); }
+        .tm.warning { background: #fffbeb; color: #92400e; border-left: 4px solid #f59e0b; }
+        .tm.info    { background: #eff6ff; color: #1e40af; border-left: 4px solid var(--accent); }
+        .tm.error   { background: #fef2f2; color: #991b1b; border-left: 4px solid #ef4444; }
+
+        /* ══ MOBILE TOPBAR ══ */
+        .mob-topbar {
+            display: none; position: fixed; top: 0; left: 0; right: 0; height: 56px;
+            background: var(--sidebar-bg); z-index: 200;
+            align-items: center; padding: 0 14px; gap: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+        .mob-topbar .mtb-ham {
+            width: 36px; height: 36px; border-radius: 9px; border: none;
+            background: rgba(255,255,255,0.08); color: #fff;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1rem; cursor: pointer; flex-shrink: 0;
+        }
+        .mob-topbar .mtb-brand { color: #fff; font-weight: 700; font-size: 0.92rem; flex: 1; }
+        .mob-topbar .mtb-brand span { color: rgba(255,255,255,0.4); font-weight: 400; font-size: 0.72rem; margin-left: 5px; }
+
+        /* ══ SIDEBAR OVERLAY ══ */
+        .sb-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 150; }
+        .sb-overlay.show { display: block; }
+
+        /* ══ RESPONSIVE ══ */
+        @media (max-width: 1024px) and (min-width: 769px) {
+            .sidebar { transform: translateX(-100%); transition: transform 0.28s cubic-bezier(.4,0,.2,1); z-index: 160; }
+            .sidebar.open { transform: translateX(0); }
+            .mob-topbar { display: flex; }
+            .main { margin-left: 0; padding: 78px 20px 30px; }
+            .kpi-row { grid-template-columns: repeat(2,1fr); }
+            .dash-grid { grid-template-columns: 1fr; }
+            .dash-grid-3 { grid-template-columns: 1fr 1fr; }
+        }
+        @media (max-width: 768px) {
+            .sidebar { transform: translateX(-100%); transition: transform 0.28s cubic-bezier(.4,0,.2,1); z-index: 160; }
+            .sidebar.open { transform: translateX(0); }
+            .mob-topbar { display: flex; }
+            .main { margin-left: 0; padding: 70px 16px 30px; }
+            .kpi-row { grid-template-columns: repeat(2,1fr); gap: 10px; }
+            .dash-grid { grid-template-columns: 1fr; }
+            .dash-grid-3 { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 575px) {
+            .main { padding: 66px 12px 30px; }
+            .kpi-row { grid-template-columns: repeat(2,1fr); gap: 8px; }
+            .pg-title h2 { font-size: 1.1rem; }
         }
     </style>
-</head>
-<body>
-    <nav class="navbar navbar-expand-lg navbar-dark" style="background-color: rgba(0,0,0,0.8);">
-        <div class="container">
-            <a class="navbar-brand" href="/">
-                <i class="fas fa-bus me-2"></i>Travel Agent Supporting Tool
-            </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="/">Home</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/history">History</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/about">About</a>
-                    </li>
-                </ul>
-                <div class="system-status ms-3">
-                    <span class="live-indicator"></span> System Ready
-                </div>
-            </div>
+{% endblock %}
+
+{% block content %}
+<!-- Page header -->
+    <div class="pg-header">
+        <div class="pg-title">
+            <h2><i class="fas fa-tachometer-alt me-2" style="color:var(--accent)"></i>Live Dashboard</h2>
+            <p>Real-time passenger monitoring and operational control</p>
         </div>
-    </nav>
+        <div class="pg-actions">
+            <div class="live-pill"><div class="live-dot"></div> Live Monitoring</div>
+        </div>
+    </div>
 
-    <div class="container dashboard-container mt-4">
-        <header class="dashboard-header d-flex justify-content-between align-items-center mb-4">
-            <h1 class="m-0"><i class="fas fa-tachometer-alt"></i> Live Dashboard</h1>
-        </header>
+    <!-- KPI strip -->
+    <div class="kpi-row">
+        <div class="kpi-c">
+            <div class="kpi-ic blue"><i class="fas fa-users"></i></div>
+            <div class="kpi-body"><div class="kv" id="statActivePassengers">{{ active_passengers }}</div><div class="kl">Active Passengers</div></div>
+        </div>
+        <div class="kpi-c">
+            <div class="kpi-ic green"><i class="fas fa-route"></i></div>
+            <div class="kpi-body"><div class="kv" id="statTodayJourneys">{{ today_journeys }}</div><div class="kl">Today's Journeys</div></div>
+        </div>
+        <div class="kpi-c">
+            <div class="kpi-ic red"><i class="fas fa-exclamation-triangle"></i></div>
+            <div class="kpi-body"><div class="kv" id="statAnomalies">{{ current_bus_turn.anomaly_count if current_bus_turn else 0 }}</div><div class="kl">Anomalies</div></div>
+        </div>
+        <div class="kpi-c">
+            <div class="kpi-ic yellow"><i class="fas fa-user-check"></i></div>
+            <div class="kpi-body"><div class="kv" id="statTodaysPassengers">{{ current_bus_turn.passenger_count if current_bus_turn else 0 }}</div><div class="kl">Today's Passengers</div></div>
+        </div>
+    </div>
 
-        <div class="dashboard-grid">
-            <div class="dashboard-card">
-                <h3><i class="fas fa-bus"></i> Current Bus Turn</h3>
-                <div class="bus-turn-info">
+    <!-- Row 1: Bus Turn + Statistics -->
+    <div class="dash-grid">
+
+        <!-- Bus Turn -->
+        <div class="pc">
+            <div class="pc-hdr">
+                <div class="pc-hdr-ic pc-hdr-ic-blue"><i class="fas fa-bus"></i></div>
+                <h5>Current Bus Turn</h5>
+                <div class="pc-hdr-right">
                     {% if current_bus_turn %}
-                    <div class="info-row">
-                        <span class="info-label">Turn ID:</span>
-                        <span class="info-value" id="turnId">{{ current_bus_turn.bus_turn_id }}</span>
-                    </div>
-                    <div class="info-row">
-                        <span class="info-label">Started:</span>
-                        <span class="info-value" id="turnStart">{{ current_bus_turn.start_time.strftime('%H:%M:%S') }}</span>
-                    </div>
-                    <div class="info-row">
-                        <span class="info-label">Duration:</span>
-                        <span class="info-value" id="duration">Calculating...</span>
-                    </div>
-                    <div class="info-row">
-                        <span class="info-label">Status:</span>
-                        <span class="status-badge active">Active</span>
-                    </div>
-
-                    <div class="mt-4 text-center">
-                        <button class="btn btn-danger w-100" onclick="endJourney()" id="endJourneyBtn">
-                            <i class="fas fa-stop-circle"></i> End Journey
-                        </button>
-                    </div>
-
+                    <span class="bp bp-active">Active</span>
                     {% else %}
-                    <div class="no-turn text-center py-3">
-                        <i class="fas fa-exclamation-circle fa-2x mb-2 text-warning"></i>
-                        <p>No active bus turn</p>
-                        <button class="btn btn-success w-100 mt-2" onclick="startJourney()" id="startJourneyBtn">
-                            <i class="fas fa-play"></i> Start Journey
-                        </button>
-                    </div>
+                    <span class="bp bp-idle">Idle</span>
                     {% endif %}
                 </div>
             </div>
+            <div class="pc-body">
+                {% if current_bus_turn %}
+                <div class="info-row"><span class="info-label">Turn ID</span><span class="info-value">{{ current_bus_turn.bus_turn_id }}</span></div>
+                <div class="info-row"><span class="info-label">Started</span><span class="info-value" id="turnStart">{{ current_bus_turn.start_time.strftime('%H:%M:%S') }}</span></div>
+                <div class="info-row"><span class="info-label">Duration</span><span class="info-value" id="duration">Calculating...</span></div>
+                <div class="info-row"><span class="info-label">Status</span><span class="status-badge active">Active</span></div>
+                <div style="margin-top:16px;">
+                    <button class="abt red w-full" onclick="endJourney()" id="endJourneyBtn">
+                        <i class="fas fa-stop-circle"></i> End Journey
+                    </button>
+                </div>
+                {% else %}
+                <div class="no-turn-state">
+                    <div class="nt-icon"><i class="fas fa-exclamation-circle"></i></div>
+                    <p>No active bus turn. Start a new journey to begin monitoring passengers.</p>
+                    <button class="abt green w-full" onclick="startJourney()" id="startJourneyBtn">
+                        <i class="fas fa-play"></i> Start Journey
+                    </button>
+                </div>
+                {% endif %}
+            </div>
+        </div>
 
-            <div class="dashboard-card">
-                <h3><i class="fas fa-chart-bar"></i> Statistics</h3>
+        <!-- Statistics -->
+        <div class="pc">
+            <div class="pc-hdr">
+                <div class="pc-hdr-ic pc-hdr-ic-green"><i class="fas fa-chart-bar"></i></div>
+                <h5>Statistics</h5>
+            </div>
+            <div class="pc-body">
                 <div class="stats-grid">
                     <div class="stat-item">
-                        <div class="stat-value" id="statActivePassengers">{{ active_passengers }}</div>
+                        <div class="stat-value" id="statsActivePassengers">{{ active_passengers }}</div>
                         <div class="stat-label">Active Passengers</div>
                     </div>
                     <div class="stat-item">
-                        <div class="stat-value" id="statTodaysPassengers">{{ current_bus_turn.passenger_count if current_bus_turn else 0 }}</div>
-                        <div class="stat-label">Today's Passengers</div>
+                        <div class="stat-value" id="statsBusTurnPassengers">{{ current_bus_turn.passenger_count if current_bus_turn else 0 }}</div>
+                        <div class="stat-label">This Turn</div>
                     </div>
                     <div class="stat-item">
-                        <div class="stat-value" id="statTodayJourneys">{{ today_journeys }}</div>
+                        <div class="stat-value" id="statsTodayJourneys">{{ today_journeys }}</div>
                         <div class="stat-label">Today's Journeys</div>
                     </div>
                     <div class="stat-item">
-                        <div class="stat-value" id="statAnomalies">{{ current_bus_turn.anomaly_count if current_bus_turn else 0 }}</div>
+                        <div class="stat-value" id="statsAnomalies">{{ current_bus_turn.anomaly_count if current_bus_turn else 0 }}</div>
                         <div class="stat-label">Anomalies</div>
                     </div>
                 </div>
             </div>
+        </div>
 
-            <div class="dashboard-card wide-card">
-                <h3><i class="fas fa-bell"></i> Recent Alerts</h3>
-                <div class="alerts-container">
-                    <div class="alerts-list" id="alertsList">
-                        {% for alert in recent_alerts %}
-                        <div class="alert-item {{ 'alert-anomaly' if alert.alert_type == 'anomaly' else 'alert-normal' }}">
-                            <div class="alert-icon">
-                                <i class="fas {{ 'fa-exclamation-triangle' if alert.alert_type == 'anomaly' else 'fa-check-circle' }}"></i>
-                            </div>
-                            <div class="alert-content">
-                                <div class="alert-header">
-                                    <span class="alert-passenger">Passenger {{ alert.passenger_id }}</span>
-                                    <span class="alert-time">{{ alert.timestamp.strftime('%H:%M:%S') }}</span>
-                                </div>
-                                <div class="alert-details">
-                                    {{ 'ANOMALY DETECTED' if alert.alert_type == 'anomaly' else 'Normal Exit' }}
-                                    <span class="alert-confidence">({{ "%.1f"|format(alert.confidence * 100) }}%)</span>
-                                </div>
-                            </div>
+    </div>
+
+    <!-- Row 2: Recent Alerts (full width) -->
+    <div class="pc" style="margin-bottom:18px;">
+        <div class="pc-hdr">
+            <div class="pc-hdr-ic pc-hdr-ic-red"><i class="fas fa-bell"></i></div>
+            <h5>Recent Alerts</h5>
+        </div>
+        <div class="pc-body">
+            <div class="alerts-list" id="alertsList">
+                {% for alert in recent_alerts %}
+                <div class="alert-item {{ 'alert-anomaly' if alert.alert_type == 'anomaly' else 'alert-normal' }}">
+                    <div class="alert-icon">
+                        <i class="fas {{ 'fa-exclamation-triangle' if alert.alert_type == 'anomaly' else 'fa-check-circle' }}"></i>
+                    </div>
+                    <div class="alert-content">
+                        <div class="alert-header">
+                            <span class="alert-passenger">Passenger {{ alert.passenger_id }}</span>
+                            <span class="alert-time">{{ alert.timestamp.strftime('%H:%M:%S') }}</span>
                         </div>
-                        {% endfor %}
+                        <div class="alert-details">
+                            {{ 'ANOMALY DETECTED' if alert.alert_type == 'anomaly' else 'Normal Exit' }}
+                            <span class="alert-confidence">({{ "%.1f"|format(alert.confidence * 100) }}%)</span>
+                        </div>
                     </div>
                 </div>
+                {% else %}
+                <div class="alerts-empty"><i class="fas fa-check-circle me-2" style="color:var(--accent2)"></i>No recent alerts</div>
+                {% endfor %}
             </div>
+        </div>
+    </div>
 
-            <div class="dashboard-card">
-                <h3><i class="fas fa-server"></i> System Status</h3>
+    <!-- Row 3: System Status + Quick Actions + Real-time Updates -->
+    <div class="dash-grid-3">
+
+        <!-- System Status -->
+        <div class="pc">
+            <div class="pc-hdr">
+                <div class="pc-hdr-ic pc-hdr-ic-purple"><i class="fas fa-server"></i></div>
+                <h5>System Status</h5>
+            </div>
+            <div class="pc-body">
                 <div class="status-list">
                     <div class="status-item">
-                        <span class="status-label">ML Models:</span>
+                        <span class="status-label">ML Models</span>
                         <span class="status-indicator active"></span>
                         <span class="status-text">Loaded</span>
                     </div>
                     <div class="status-item">
-                        <span class="status-label">Database:</span>
+                        <span class="status-label">Database</span>
                         <span class="status-indicator active"></span>
                         <span class="status-text">Connected</span>
                     </div>
                     <div class="status-item">
-                        <span class="status-label">Processing:</span>
+                        <span class="status-label">Processing</span>
                         <span class="status-indicator active"></span>
                         <span class="status-text">Real-time</span>
                     </div>
                 </div>
             </div>
+        </div>
 
-            <div class="dashboard-card">
-                <h3><i class="fas fa-bolt"></i> Quick Actions</h3>
+        <!-- Quick Actions -->
+        <div class="pc">
+            <div class="pc-hdr">
+                <div class="pc-hdr-ic pc-hdr-ic-yellow"><i class="fas fa-bolt"></i></div>
+                <h5>Quick Actions</h5>
+            </div>
+            <div class="pc-body">
                 <div class="quick-actions-list">
-                    <button class="action-btn w-100 text-start" onclick="quickNewPassenger()">
-                        <i class="fas fa-user-plus me-2"></i> New Passenger
+                    <button class="action-btn" onclick="quickNewPassenger()">
+                        <i class="fas fa-user-plus"></i> New Passenger
                     </button>
-                    <button class="action-btn w-100 text-start" onclick="showPassengerExit()">
-                        <i class="fas fa-user-minus me-2"></i> Passenger Exit
+                    <button class="action-btn" onclick="showPassengerExit()">
+                        <i class="fas fa-user-minus"></i> Passenger Exit
                     </button>
-                    <button class="action-btn w-100 text-start" onclick="location.href='/history'">
-                        <i class="fas fa-search me-2"></i> Search History
+                    <button class="action-btn" onclick="location.href='/history'">
+                        <i class="fas fa-search"></i> Search History
                     </button>
-                    <button class="action-btn w-100 text-start" onclick="generateReport()">
-                        <i class="fas fa-file-export me-2"></i> Generate Report
+                    <button class="action-btn" onclick="generateReport()">
+                        <i class="fas fa-file-export"></i> Generate Report
                     </button>
                 </div>
             </div>
         </div>
 
-        <div class="real-time-updates mt-4 mb-5">
-            <h3><i class="fas fa-sync-alt"></i> Real-time Updates</h3>
-            <div class="updates-log" id="updatesLog"></div>
-        </div>
-    </div>
-
-    <div class="modal" id="exitModal">
-        <div class="modal-content">
-            <h3><i class="fas fa-door-open"></i> Passenger Exit</h3>
-            <div class="modal-body">
-                <div class="form-group">
-                    <label for="exitPassengerId">Passenger ID:</label>
-                    <input type="text" id="exitPassengerId" placeholder="Enter passenger ID">
-                </div>
-                <div class="modal-actions">
-                    <button class="btn btn-secondary" onclick="closeExitModal()">Cancel</button>
-                    <button class="btn btn-primary" onclick="processExit()">Process Exit</button>
+        <!-- Real-time Updates -->
+        <div class="pc">
+            <div class="pc-hdr">
+                <div class="pc-hdr-ic pc-hdr-ic-blue"><i class="fas fa-sync-alt"></i></div>
+                <h5>Real-time Updates</h5>
+            </div>
+            <div class="pc-body" style="padding:0;">
+                <div class="updates-log" id="updatesLog">
+                    <div class="updates-empty"><i class="fas fa-clock me-2"></i>Waiting for events…</div>
                 </div>
             </div>
         </div>
+
     </div>
+{% endblock %}
 
-    <footer>
-        <div class="container text-center">
-            <p class="mb-2">© 2024 Travel Agent Supporting Tool. All rights reserved.</p>
-            <p class="text-muted" style="color: #adb5bd !important;">Powered by AI & Machine Learning Technologies</p>
+{% block extra_js %}
+<!-- ══ PASSENGER EXIT MODAL ══ -->
+<div class="modal-bg" id="exitModal">
+    <div class="modal-box">
+        <div class="modal-hdr">
+            <i class="fas fa-door-open"></i>
+            <h5>Passenger Exit</h5>
         </div>
-    </footer>
+        <div class="modal-bdy">
+            <div class="fg">
+                <label>Passenger ID</label>
+                <input type="text" id="exitPassengerId" placeholder="e.g. P123">
+            </div>
+        </div>
+        <div class="modal-ftr">
+            <button class="abt ghost" onclick="closeExitModal()">Cancel</button>
+            <button class="abt blue"  onclick="processExit()">Process Exit</button>
+        </div>
+    </div>
+</div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+<!-- Toast container -->
+<div class="tc" id="toastContainer"></div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    const socket = io({ path: '/socket.io', transports: ['websocket', 'polling'] });
 
-    <script>
-        const socket = io({ path: '/socket.io', transports: ['websocket', 'polling'] });
+    socket.on('connection_established', (data) => console.log('Socket connected:', data));
 
-        socket.on('connection_established', (data) => {
-            console.log('Socket connected:', data);
-        });
+    // ── Helper: set text content by element ID safely ──
+    function set(id, val) {
+        const el = document.getElementById(id);
+        if (el) el.textContent = val;
+    }
 
-        // Duration timer
-        function updateDuration() {
-            {% if current_bus_turn %}
-            const startTime = new Date("{{ current_bus_turn.start_time.isoformat() }}");
-            const now = new Date();
-            const diff = Math.floor((now - startTime) / 1000);
-            const hours = Math.floor(diff / 3600);
-            const minutes = Math.floor((diff % 3600) / 60);
-            const seconds = diff % 60;
-            const el = document.getElementById('duration');
-            if (el) {
-                el.textContent =
-                    `${hours.toString().padStart(2,'0')}:${minutes.toString().padStart(2,'0')}:${seconds.toString().padStart(2,'0')}`;
-            }
-            {% endif %}
+    // ── Duration timer ──
+    function updateDuration() {
+        {% if current_bus_turn %}
+        const startTime = new Date("{{ current_bus_turn.start_time.isoformat() }}");
+        const diff = Math.floor((new Date() - startTime) / 1000);
+        const h = Math.floor(diff / 3600), m = Math.floor((diff % 3600) / 60), s = diff % 60;
+        const fmt = v => v.toString().padStart(2,'0');
+        const val = `${fmt(h)}:${fmt(m)}:${fmt(s)}`;
+        ['duration','sbDuration'].forEach(id => { const el = document.getElementById(id); if (el) el.textContent = val; });
+        {% endif %}
+    }
+    setInterval(updateDuration, 1000);
+    updateDuration();
+
+    // ── Real-time events ──
+    socket.on('passenger_entered', (data) => {
+        appendUpdate('normal', `Passenger ${data.passenger_id} entered`);
+        // Directly update all active-passenger count elements from the event payload
+        if (data.active_count !== undefined) {
+            set('statActivePassengers',   data.active_count);
+            set('statsActivePassengers',  data.active_count);
+            set('statTodaysPassengers',   data.active_count);
+            set('statsBusTurnPassengers', data.active_count);
+            set('sbPassengersCount',      data.active_count);
         }
-        setInterval(updateDuration, 1000);
-        updateDuration();
-
-        // Real-time events
-        socket.on('passenger_entered', (data) => {
-            appendUpdate('normal', `Passenger ${data.passenger_id} entered`);
-            refreshStats();
-        });
-
-        socket.on('passenger_exit', (data) => {
-            const alertType = data.anomaly ? 'anomaly' : 'normal';
-            appendUpdate(alertType, `Passenger ${data.passenger_id} exited — ${data.anomaly ? 'ANOMALY DETECTED' : 'Normal'} (${(data.confidence*100).toFixed(1)}%)`);
-            refreshStats();
-        });
-
-        socket.on('bus_turn_started', (data) => {
-            appendUpdate('normal', `Bus turn started: ${data.bus_turn_id}`);
-            location.reload();
-        });
-
-        socket.on('journey_ended', (data) => {
-            appendUpdate('normal', `Bus turn ended. Passengers: ${data.total_passengers}, Anomalies: ${data.anomalies_detected}`);
-            location.reload();
-        });
-
-        function appendUpdate(type, text) {
-            const log = document.getElementById('updatesLog');
-            const item = document.createElement('div');
-            item.className = `update-item update-${type}`;
-            const ts = new Date().toLocaleTimeString();
-            item.innerHTML = `
-                <span class="update-time">${ts}</span>
-                <span class="update-text">${text}</span>
-            `;
-            log.insertBefore(item, log.firstChild);
-            while (log.children.length > 50) log.removeChild(log.lastChild);
+        refreshStats();
+    });
+    socket.on('passenger_exit', (data) => {
+        appendUpdate(data.anomaly ? 'anomaly' : 'normal',
+            `Passenger ${data.passenger_id} exited — ${data.anomaly ? 'ANOMALY DETECTED' : 'Normal'} (${(data.confidence*100).toFixed(1)}%)`);
+        // Directly update all active-passenger count elements from the event payload
+        if (data.active_count !== undefined) {
+            set('statActivePassengers',   data.active_count);
+            set('statsActivePassengers',  data.active_count);
+            set('statTodaysPassengers',   data.active_count);
+            set('statsBusTurnPassengers', data.active_count);
+            set('sbPassengersCount',      data.active_count);
         }
+        refreshStats();
+        if (data.anomaly) showToast(`Anomaly: Passenger ${data.passenger_id}`, 'warning');
+        else              showToast(`Passenger ${data.passenger_id} exited normally`, 'success');
+    });
+    socket.on('bus_turn_started', (data) => {
+        appendUpdate('normal', `Bus turn started: ${data.bus_turn_id}`);
+        location.reload();
+    });
+    socket.on('journey_ended', (data) => {
+        appendUpdate('normal', `Bus turn ended. Passengers: ${data.total_passengers}, Anomalies: ${data.anomalies_detected}`);
+        location.reload();
+    });
 
-        // Start/End Journey
-        async function startJourney() {
-            const btn = document.getElementById('startJourneyBtn');
-            if (btn) btn.disabled = true;
-            try {
-                const res = await fetch('/start_journey', { method: 'POST' });
-                const data = await res.json();
-                if (data && data.success) {
-                    alert('Journey started: ' + data.bus_turn_id);
-                    location.reload();
-                } else {
-                    alert('Failed to start journey: ' + (data.error || 'Unknown error'));
-                    if (btn) btn.disabled = false;
-                }
-            } catch (e) {
-                alert('Network error starting journey: ' + (e.message || e));
-                if (btn) btn.disabled = false;
-            }
-        }
+    function appendUpdate(type, text) {
+        const log = document.getElementById('updatesLog');
+        // Remove empty placeholder
+        const empty = log.querySelector('.updates-empty');
+        if (empty) empty.remove();
+        const item = document.createElement('div');
+        item.className = `update-item update-${type}`;
+        item.innerHTML = `<span class="update-time">${new Date().toLocaleTimeString()}</span><span class="update-text">${text}</span>`;
+        log.insertBefore(item, log.firstChild);
+        while (log.children.length > 50) log.removeChild(log.lastChild);
+    }
 
-        async function endJourney() {
-            const btn = document.getElementById('endJourneyBtn');
-            if (!confirm('Are you sure you want to end the current bus turn?')) return;
-            if (btn) btn.disabled = true;
-            try {
-                const res = await fetch('/end_journey', { method: 'POST' });
-                const data = await res.json();
-                if (data.success) {
-                    alert('Bus turn ended successfully!');
-                    location.reload();
-                } else {
-                    alert('Failed to end bus turn: ' + data.error);
-                    if (btn) btn.disabled = false;
-                }
-            } catch (e) {
-                alert('Network error ending journey: ' + (e.message || e));
-                if (btn) btn.disabled = false;
-            }
-        }
+    // ── Journey control ──
+    async function startJourney() {
+        const btn = document.getElementById('startJourneyBtn');
+        if (btn) btn.disabled = true;
+        try {
+            const res  = await fetch('/start_journey', { method: 'POST' });
+            const data = await res.json();
+            if (data && data.success) { showToast('Journey started: ' + data.bus_turn_id, 'success'); location.reload(); }
+            else { showToast('Failed: ' + (data.error || 'Unknown'), 'error'); if (btn) btn.disabled = false; }
+        } catch (e) { showToast('Network error: ' + e.message, 'error'); if (btn) btn.disabled = false; }
+    }
+    async function endJourney() {
+        if (!confirm('Are you sure you want to end the current bus turn?')) return;
+        const btn = document.getElementById('endJourneyBtn');
+        if (btn) btn.disabled = true;
+        try {
+            const res  = await fetch('/end_journey', { method: 'POST' });
+            const data = await res.json();
+            if (data.success) { showToast('Bus turn ended successfully!', 'success'); location.reload(); }
+            else { showToast('Failed: ' + data.error, 'error'); if (btn) btn.disabled = false; }
+        } catch (e) { showToast('Network error: ' + e.message, 'error'); if (btn) btn.disabled = false; }
+    }
 
-        // Quick actions
-        async function quickNewPassenger() {
-            const id = prompt('Enter Passenger ID (e.g., P123):');
-            if (!id) return;
-            try { await fetch('/api/camera/stop', { method: 'POST' }); } catch {}
-            setTimeout(() => {
-                location.href = `/capture?passenger_id=${encodeURIComponent(id)}&type=entrance`;
-            }, 200);
-        }
+    // ── Quick actions ──
+    async function quickNewPassenger() {
+        const id = prompt('Enter Passenger ID (e.g., P123):');
+        if (!id) return;
+        try { await fetch('/api/camera/stop', { method: 'POST' }); } catch {}
+        setTimeout(() => { location.href = `/capture?passenger_id=${encodeURIComponent(id)}&type=entrance`; }, 200);
+    }
+    function showPassengerExit()  { document.getElementById('exitModal').classList.add('show'); }
+    function closeExitModal()     { document.getElementById('exitModal').classList.remove('show'); }
+    async function processExit() {
+        const id = document.getElementById('exitPassengerId').value.trim();
+        if (!id) { showToast('Please enter a passenger ID', 'warning'); return; }
+        try { await fetch('/api/camera/stop', { method: 'POST' }); } catch {}
+        setTimeout(() => { location.href = `/capture_exit/${encodeURIComponent(id)}`; }, 200);
+    }
+    function generateReport() { showToast('Report generation coming soon!', 'info'); }
 
-        function showPassengerExit() {
-            document.getElementById('exitModal').style.display = 'flex';
-        }
-        function closeExitModal() {
-            document.getElementById('exitModal').style.display = 'none';
-        }
-        async function processExit() {
-            const passengerId = document.getElementById('exitPassengerId').value;
-            if (!passengerId) { alert('Please enter a passenger ID'); return; }
-            try { await fetch('/api/camera/stop', { method: 'POST' }); } catch {}
-            setTimeout(() => {
-                location.href = `/capture_exit/${encodeURIComponent(passengerId)}`;
-            }, 200);
-        }
+    // ── Stats polling ──
+    async function refreshStats() {
+        try {
+            const s = await (await fetch('/api/dashboard_stats')).json();
+            // Active / current-turn passenger counts
+            set('statActivePassengers',   s.active_passengers);
+            set('statsActivePassengers',  s.active_passengers);
+            set('statTodaysPassengers',   s.active_passengers);
+            set('statsBusTurnPassengers', s.active_passengers);
+            set('sbPassengersCount',      s.active_passengers);
+            // Journey / anomaly counts
+            set('statTodayJourneys',      s.today_journeys);
+            set('statsTodayJourneys',     s.today_journeys);
+            set('statAnomalies',          s.anomalies);
+            set('statsAnomalies',         s.anomalies);
+            set('sbAnomalyCount',         s.anomalies);
+        } catch (e) { console.warn('Stats refresh failed', e); }
+    }
+    setInterval(refreshStats, 8000);
 
-        function generateReport() {
-            alert('Report generation feature coming soon!');
-        }
+    // ── Sidebar (mobile) ──
+    function toggleSidebar() {
+        document.getElementById('sidebar').classList.toggle('open');
+        document.getElementById('sbOverlay').classList.toggle('show');
+    }
+    function closeSidebar() {
+        document.getElementById('sidebar').classList.remove('open');
+        document.getElementById('sbOverlay').classList.remove('show');
+    }
 
-        // Stats polling
-        async function refreshStats() {
-            try {
-                const res = await fetch('/api/dashboard_stats');
-                const s = await res.json();
-                const ap = document.getElementById('statActivePassengers');
-                const tj = document.getElementById('statTodayJourneys');
-                const an = document.getElementById('statAnomalies');
-                if (ap) ap.textContent = s.active_passengers;
-                if (tj) tj.textContent = s.today_journeys;
-                if (an) an.textContent = s.anomalies;
-            } catch (e) {
-                console.warn('Failed to refresh stats', e);
-            }
-        }
-        setInterval(refreshStats, 8000);
+    // ── Toasts ──
+    function showToast(msg, type = 'info') {
+        const tc = document.getElementById('toastContainer');
+        const t  = document.createElement('div');
+        t.className = `tm ${type}`;
+        const icons = { warning:'fa-exclamation-triangle', success:'fa-check-circle', info:'fa-info-circle', error:'fa-times-circle' };
+        t.innerHTML = `<i class="fas ${icons[type]||icons.info}"></i>${msg}`;
+        tc.appendChild(t); setTimeout(() => t.remove(), 5000);
+    }
 
-        // Close modal on outside click
-        window.onclick = function(event) {
-            const modal = document.getElementById('exitModal');
-            if (event.target === modal) closeExitModal();
-        }
-    </script>
-</body>
-</html>
+    // Close modal on outside click
+    document.getElementById('exitModal').addEventListener('click', function(e) {
+        if (e.target === this) closeExitModal();
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{% block title %}Travel Agent Tool{% endblock %}</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        /* ══ Variables ══ */
+        :root {
+            --sidebar-w: 260px;
+            --sidebar-bg: #0f172a;
+            --accent:  #3b82f6;
+            --accent2: #10b981;
+            --page-bg: #f1f5f9;
+            --card-r:  16px;
+        }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--page-bg);
+            min-height: 100vh;
+            display: flex;
+            color: #334155;
+        }
+
+        /* ══ SIDEBAR ══ */
+        .sidebar {
+            position: fixed; top: 0; left: 0;
+            width: var(--sidebar-w); height: 100vh;
+            background: var(--sidebar-bg);
+            display: flex; flex-direction: column;
+            z-index: 100; overflow-y: auto;
+        }
+        .sb-brand {
+            padding: 20px 18px 14px;
+            display: flex; align-items: center; gap: 12px;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+        .sb-brand-icon {
+            width: 40px; height: 40px; border-radius: 10px; flex-shrink: 0;
+            background: linear-gradient(135deg, #3b82f6, #6366f1);
+            display: flex; align-items: center; justify-content: center;
+            color: #fff; font-size: 1.1rem;
+        }
+        .sb-brand-text strong { color: #fff; font-size: 0.92rem; display: block; line-height: 1.2; }
+        .sb-brand-text span   { color: rgba(255,255,255,0.4); font-size: 0.7rem; }
+
+        /* Journey status block */
+        .sb-journey-block {
+            padding: 16px 18px 14px;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+        .sb-journey-title {
+            font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.8px;
+            color: rgba(255,255,255,0.35); margin-bottom: 10px;
+        }
+        .sb-journey-badge {
+            display: flex; align-items: center; gap: 8px;
+            border-radius: 9px; padding: 8px 12px; margin-bottom: 10px;
+        }
+        .sb-journey-badge.active-turn  { background: rgba(16,185,129,0.12); border: 1px solid rgba(16,185,129,0.25); }
+        .sb-journey-badge.inactive-turn { background: rgba(245,158,11,0.12); border: 1px solid rgba(245,158,11,0.25); }
+        .sb-pulse-green  { width: 8px; height: 8px; border-radius: 50%; background: #10b981; flex-shrink: 0; animation: pulse-dot 2s infinite; }
+        .sb-pulse-yellow { width: 8px; height: 8px; border-radius: 50%; background: #f59e0b; flex-shrink: 0; animation: pulse-dot 2s infinite; }
+        @keyframes pulse-dot { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
+        .sb-journey-badge.active-turn  span { color: #6ee7b7; font-size: 0.78rem; font-weight: 600; }
+        .sb-journey-badge.inactive-turn span { color: #fcd34d; font-size: 0.78rem; font-weight: 600; }
+        .sb-mini-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+        .sb-mini-stat {
+            background: rgba(255,255,255,0.05); border-radius: 9px;
+            padding: 7px 9px; text-align: center;
+        }
+        .sb-mini-stat .msv { color: #fff; font-size: 0.77rem; font-weight: 600; }
+        .sb-mini-stat .msl { color: rgba(255,255,255,0.38); font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 1px; }
+
+        /* Nav */
+        .sb-nav { padding: 14px 12px; flex: 1; }
+        .sb-nav-label {
+            font-size: 0.63rem; text-transform: uppercase; letter-spacing: 1px;
+            color: rgba(255,255,255,0.28); padding: 0 8px; margin-bottom: 6px;
+        }
+        .sb-nav-label-spaced { margin-top: 14px; }
+        .sb-btn {
+            display: flex; align-items: center; gap: 11px; width: 100%;
+            padding: 10px 12px; border-radius: 10px; border: none;
+            background: transparent; color: rgba(255,255,255,0.55); font-size: 0.83rem;
+            cursor: pointer; transition: all 0.18s; margin-bottom: 3px; text-align: left;
+        }
+        .sb-btn:hover { background: rgba(255,255,255,0.07); color: #fff; }
+        .sb-btn.active { background: rgba(59,130,246,0.18); color: #fff; font-weight: 600; }
+        .sb-btn.active .sb-btn-icon { background: var(--accent); color: #fff; }
+        .sb-btn-icon {
+            width: 30px; height: 30px; border-radius: 7px; flex-shrink: 0;
+            background: rgba(255,255,255,0.08);
+            display: flex; align-items: center; justify-content: center; font-size: 0.82rem;
+            transition: background 0.18s;
+        }
+        .sb-footer { padding: 10px 12px 16px; border-top: 1px solid rgba(255,255,255,0.06); }
+        .sb-btn-sm { font-size: 0.78rem; }
+        .sb-btn-icon-green { background: rgba(16,185,129,0.15); color: #10b981; }
+        .sb-btn-icon-red   { background: rgba(239,68,68,0.15);  color: #ef4444; }
+
+        /* ══ MAIN ══ */
+        .main { margin-left: var(--sidebar-w); flex: 1; min-width: 0; padding: 26px 26px 60px; }
+
+        /* ══ TOASTS ══ */
+        .tc { position: fixed; top: 20px; right: 20px; z-index: 99999; display: flex; flex-direction: column; gap: 7px; }
+        .tm {
+            padding: 11px 16px; border-radius: 10px; font-size: 0.8rem; font-weight: 500;
+            display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 14px rgba(0,0,0,0.1);
+            animation: tslide 0.28s ease;
+        }
+        @keyframes tslide { from { transform: translateX(50px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        .tm.success { background: #ecfdf5; color: #065f46; border-left: 4px solid var(--accent2); }
+        .tm.warning { background: #fffbeb; color: #92400e; border-left: 4px solid #f59e0b; }
+        .tm.info    { background: #eff6ff; color: #1e40af; border-left: 4px solid var(--accent); }
+        .tm.error   { background: #fef2f2; color: #991b1b; border-left: 4px solid #ef4444; }
+
+        /* ══ MOBILE TOPBAR ══ */
+        .mob-topbar {
+            display: none; position: fixed; top: 0; left: 0; right: 0; height: 56px;
+            background: var(--sidebar-bg); z-index: 200;
+            align-items: center; padding: 0 14px; gap: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+        .mob-topbar .mtb-ham {
+            width: 36px; height: 36px; border-radius: 9px; border: none;
+            background: rgba(255,255,255,0.08); color: #fff;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1rem; cursor: pointer; flex-shrink: 0;
+        }
+        .mob-topbar .mtb-brand { color: #fff; font-weight: 700; font-size: 0.92rem; flex: 1; }
+        .mob-topbar .mtb-brand span { color: rgba(255,255,255,0.4); font-weight: 400; font-size: 0.72rem; margin-left: 5px; }
+
+        /* ══ SIDEBAR OVERLAY ══ */
+        .sb-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 150; }
+        .sb-overlay.show { display: block; }
+
+        /* ══ RESPONSIVE ══ */
+        @media (max-width: 1024px) and (min-width: 769px) {
+            .sidebar { transform: translateX(-100%); transition: transform 0.28s cubic-bezier(.4,0,.2,1); z-index: 160; }
+            .sidebar.open { transform: translateX(0); }
+            .mob-topbar { display: flex; }
+            .main { margin-left: 0; padding: 78px 20px 30px; }
+        }
+        @media (max-width: 768px) {
+            .sidebar { transform: translateX(-100%); transition: transform 0.28s cubic-bezier(.4,0,.2,1); z-index: 160; }
+            .sidebar.open { transform: translateX(0); }
+            .mob-topbar { display: flex; }
+            .main { margin-left: 0; padding: 70px 16px 30px; }
+        }
+        @media (max-width: 575px) {
+            .main { padding: 66px 12px 30px; }
+        }
+    </style>
+
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+
+<!-- ══ MOBILE TOPBAR ══ -->
+<div class="mob-topbar" id="mobTopbar">
+    <button class="mtb-ham" onclick="toggleSidebar()" aria-label="Menu"><i class="fas fa-bars"></i></button>
+    <div class="mtb-brand">Travel Agent Tool <span>{% block page_label %}{% endblock %}</span></div>
+</div>
+
+<!-- ══ SIDEBAR OVERLAY ══ -->
+<div class="sb-overlay" id="sbOverlay" onclick="closeSidebar()"></div>
+
+<!-- ════════════════════════
+     SIDEBAR
+     ════════════════════════ -->
+<aside class="sidebar" id="sidebar">
+
+    <div class="sb-brand">
+        <div class="sb-brand-icon"><i class="fas fa-bus"></i></div>
+        <div class="sb-brand-text">
+            <strong>Travel Agent Tool</strong>
+            <span>Sri Lanka · Smart Transport</span>
+        </div>
+    </div>
+
+    <!-- Journey status -->
+    <div class="sb-journey-block">
+        <div class="sb-journey-title">Journey Status</div>
+        {% if current_bus_turn %}
+        <div class="sb-journey-badge active-turn">
+            <div class="sb-pulse-green"></div>
+            <span>Journey Active</span>
+        </div>
+        <div class="sb-mini-stats">
+            <div class="sb-mini-stat"><div class="msv">{{ current_bus_turn.bus_turn_id }}</div><div class="msl">Turn ID</div></div>
+            <div class="sb-mini-stat"><div class="msv" id="sbDuration">—</div><div class="msl">Duration</div></div>
+            <div class="sb-mini-stat"><div class="msv" id="sbPassengersCount">{{ current_bus_turn.passenger_count }}</div><div class="msl">Passengers</div></div>
+            <div class="sb-mini-stat"><div class="msv" id="sbAnomalyCount">{{ current_bus_turn.anomaly_count }}</div><div class="msl">Anomalies</div></div>
+        </div>
+        {% else %}
+        <div class="sb-journey-badge inactive-turn">
+            <div class="sb-pulse-yellow"></div>
+            <span>No Active Journey</span>
+        </div>
+        <div class="sb-mini-stats">
+            <div class="sb-mini-stat"><div class="msv" id="sb-journeys">—</div><div class="msl">Today</div></div>
+            <div class="sb-mini-stat"><div class="msv" id="sb-active">—</div><div class="msl">Active</div></div>
+        </div>
+        {% endif %}
+    </div>
+
+    <nav class="sb-nav">
+        <div class="sb-nav-label">Main</div>
+        <button class="sb-btn {% if request.path == '/' %}active{% endif %}" onclick="window.location='/'">
+            <span class="sb-btn-icon"><i class="fas fa-home"></i></span>Home
+        </button>
+        <button class="sb-btn {% if request.path == '/dashboard' %}active{% endif %}" onclick="window.location='/dashboard'">
+            <span class="sb-btn-icon"><i class="fas fa-tachometer-alt"></i></span>Dashboard
+        </button>
+
+        <div class="sb-nav-label sb-nav-label-spaced">Features</div>
+        <button class="sb-btn {% if request.path == '/capture' %}active{% endif %}" onclick="window.location='/capture'">
+            <span class="sb-btn-icon"><i class="fas fa-camera"></i></span>Passenger Anomaly
+        </button>
+        <button class="sb-btn {% if request.path in ['/driving_ability', '/driving_ab', '/driver_behavior', '/drunkard_level'] %}active{% endif %}" onclick="window.location='/driving_ability'">
+            <span class="sb-btn-icon"><i class="fas fa-user-shield"></i></span>Driver Anomaly
+        </button>
+        <button class="sb-btn {% if request.path == '/profit_assessment' %}active{% endif %}" onclick="window.location='/profit_assessment'">
+            <span class="sb-btn-icon"><i class="fas fa-chart-line"></i></span>Profit Assessment
+        </button>
+        <button class="sb-btn {% if request.path == '/other' %}active{% endif %}" onclick="window.location='/other'">
+            <span class="sb-btn-icon"><i class="fas fa-tools"></i></span>Explore More
+        </button>
+
+        <div class="sb-nav-label sb-nav-label-spaced">Other</div>
+        <button class="sb-btn {% if request.path == '/history' %}active{% endif %}" onclick="window.location='/history'">
+            <span class="sb-btn-icon"><i class="fas fa-history"></i></span>History
+        </button>
+        <button class="sb-btn {% if request.path == '/scheduler' %}active{% endif %}" onclick="window.location='/scheduler'">
+            <span class="sb-btn-icon"><i class="fas fa-calendar-alt"></i></span>Scheduler
+        </button>
+        <button class="sb-btn {% if request.path == '/about' %}active{% endif %}" onclick="window.location='/about'">
+            <span class="sb-btn-icon"><i class="fas fa-info-circle"></i></span>About
+        </button>
+    </nav>
+
+    <div class="sb-footer">
+        {% if current_bus_turn %}
+        <button class="sb-btn sb-btn-sm" onclick="_sbEndJourney()">
+            <span class="sb-btn-icon sb-btn-icon-red"><i class="fas fa-stop-circle"></i></span>
+            End Journey
+        </button>
+        {% else %}
+        <button class="sb-btn sb-btn-sm" onclick="_sbStartJourney()">
+            <span class="sb-btn-icon sb-btn-icon-green"><i class="fas fa-play"></i></span>
+            Start Journey
+        </button>
+        {% endif %}
+    </div>
+
+</aside>
+
+<!-- ════════════════════════
+     MAIN CONTENT
+     ════════════════════════ -->
+<main class="main" id="mainContent">
+    {% block content %}{% endblock %}
+</main>
+
+<!-- Toast container -->
+<div class="tc" id="toastContainer"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // ── Sidebar duration ticker ──────────────────────────────
+    {% if current_bus_turn %}
+    (function () {
+        const _start = new Date("{{ current_bus_turn.start_time.isoformat() }}");
+        setInterval(function () {
+            const diff = Math.floor((new Date() - _start) / 1000);
+            const h = Math.floor(diff / 3600);
+            const m = Math.floor((diff % 3600) / 60);
+            const s = diff % 60;
+            const fmt = v => String(v).padStart(2, '0');
+            const el = document.getElementById('sbDuration');
+            if (el) el.textContent = fmt(h) + ':' + fmt(m) + ':' + fmt(s);
+        }, 1000);
+    })();
+    {% endif %}
+
+    // ── Sidebar Start / End Journey (global, works on all pages) ──
+    async function _sbStartJourney() {
+        try {
+            const res  = await fetch('/start_journey', { method: 'POST' });
+            const data = await res.json();
+            if (data && data.success) { _showToast('Journey started: ' + data.bus_turn_id, 'success'); location.reload(); }
+            else { _showToast('Failed: ' + (data.error || 'Unknown error'), 'error'); }
+        } catch (e) { _showToast('Network error: ' + e.message, 'error'); }
+    }
+    async function _sbEndJourney() {
+        if (!confirm('Are you sure you want to end the current bus turn?')) return;
+        try {
+            const res  = await fetch('/end_journey', { method: 'POST' });
+            const data = await res.json();
+            if (data.success) { _showToast('Bus turn ended!', 'success'); location.reload(); }
+            else { _showToast('Failed: ' + data.error, 'error'); }
+        } catch (e) { _showToast('Network error: ' + e.message, 'error'); }
+    }
+
+    // ── Sidebar (mobile) toggle ──────────────────────────────
+    function toggleSidebar() {
+        document.getElementById('sidebar').classList.toggle('open');
+        document.getElementById('sbOverlay').classList.toggle('show');
+    }
+    function closeSidebar() {
+        document.getElementById('sidebar').classList.remove('open');
+        document.getElementById('sbOverlay').classList.remove('show');
+    }
+
+    // ── Shared toast helper ──────────────────────────────────
+    function _showToast(msg, type) {
+        type = type || 'info';
+        const tc = document.getElementById('toastContainer');
+        const t  = document.createElement('div');
+        t.className = 'tm ' + type;
+        const icons = { warning: 'fa-exclamation-triangle', success: 'fa-check-circle', info: 'fa-info-circle', error: 'fa-times-circle' };
+        t.innerHTML = '<i class="fas ' + (icons[type] || icons.info) + '"></i>' + msg;
+        tc.appendChild(t);
+        setTimeout(function () { t.remove(); }, 5000);
+    }
+    // Alias so pages can call showToast() without prefix
+    var showToast = _showToast;
+</script>
+
+{% block extra_js %}{% endblock %}
+
+</body>
+</html>
