@@ -1,14 +1,14 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>About - Passenger Anomaly Detection System</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-</head>
-<body>
-    <div class="container about-container">
+{% extends "base.html" %}
+{% block title %}About - Travel Agent Tool{% endblock %}
+{% block page_label %}About{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+{% endblock %}
+
+{% block content %}
+<div class="container about-container">
         <header class="about-header">
             <h1><i class="fas fa-info-circle"></i> About the System</h1>
             <div class="header-actions">
@@ -410,7 +410,8 @@
             </div>
         </footer>
     </div>
+{% endblock %}
 
-    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
-</body>
-</html>
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+{% endblock %}

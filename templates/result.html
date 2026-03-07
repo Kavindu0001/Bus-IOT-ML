@@ -1,14 +1,14 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Detection Result - Passenger {{ passenger.passenger_id }}</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-</head>
-<body>
-    <div class="container result-container">
+{% extends "base.html" %}
+{% block title %}Detection Result - Passenger {{ passenger.passenger_id }}{% endblock %}
+{% block page_label %}Result{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+{% endblock %}
+
+{% block content %}
+<div class="container result-container">
         <header class="result-header">
             <h1><i class="fas fa-clipboard-check"></i> Detection Result</h1>
             <div class="header-actions">
@@ -180,9 +180,11 @@
             </button>
         </div>
     </div>
+{% endblock %}
 
-    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
-    <script>
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+<script>
         // Load images
         function loadImages() {
             // Simulate loading entrance images
@@ -244,5 +246,4 @@
         // Load everything when page is ready
         document.addEventListener('DOMContentLoaded', loadImages);
     </script>
-</body>
-</html>
+{% endblock %}
