@@ -1,25 +1,106 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Travel History - Anomaly Detection</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-</head>
-<body>
-    <div class="container history-container">
-        <header class="history-header">
-            <h1><i class="fas fa-history"></i> Travel History</h1>
-            <div class="header-actions">
-                <button class="btn btn-secondary" onclick="location.href='/dashboard'">
-                    <i class="fas fa-tachometer-alt"></i> Dashboard
-                </button>
-                <button class="btn btn-primary" onclick="location.href='/'">
-                    <i class="fas fa-home"></i> Home
-                </button>
-            </div>
-        </header>
+{% extends "base.html" %}
+{% block title %}Travel History{% endblock %}
+{% block page_label %}History{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+<style>
+        /* ── Tab system ───────────────────────────────────── */
+        .tab-nav {
+            display: flex;
+            gap: 4px;
+            border-bottom: 2px solid #e5e7eb;
+            margin: 18px 0 0 0;
+            padding: 0;
+        }
+        .tab-btn {
+            padding: 10px 22px;
+            border: none;
+            background: none;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #6b7280;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            margin-bottom: -2px;
+            transition: color 0.15s, border-color 0.15s;
+        }
+        .tab-btn.active { color: #2563eb; border-bottom-color: #2563eb; }
+        .tab-btn:hover:not(.active) { color: #374151; }
+        .tab-pane { display: none; padding-top: 20px; }
+        .tab-pane.active { display: block; }
+
+        /* ── Completed trips table ───────────────────────── */
+        .trips-filter-bar {
+            display: flex; gap: 12px; align-items: flex-end;
+            flex-wrap: wrap; margin-bottom: 20px;
+        }
+        .trips-filter-bar select, .trips-filter-bar input {
+            padding: 8px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 7px;
+            font-size: 0.875rem;
+            min-width: 180px;
+        }
+        .trips-filter-bar .btn-filter {
+            padding: 8px 18px;
+            background: #2563eb; color: #fff;
+            border: none; border-radius: 7px;
+            cursor: pointer; font-weight: 600; font-size: 0.875rem;
+        }
+        .trips-filter-bar .btn-filter:hover { background: #1d4ed8; }
+        .trips-table-wrap { overflow-x: auto; }
+        .trips-table {
+            width: 100%; border-collapse: collapse;
+            font-size: 0.875rem;
+        }
+        .trips-table th {
+            background: #f9fafb;
+            padding: 10px 14px;
+            text-align: left;
+            font-weight: 600;
+            color: #374151;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .trips-table td {
+            padding: 10px 14px;
+            border-bottom: 1px solid #f0f0f0;
+            color: #222;
+        }
+        .trips-table tr:hover td { background: #f9fafb; }
+        .badge-done { background: #dcfce7; color: #15803d; padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
+        .no-trips { text-align: center; padding: 40px; color: #9ca3af; }
+        .no-trips i { font-size: 2.5rem; margin-bottom: 10px; display: block; }
+
+        /* ── Utility ──────────────────────────────────────── */
+        .tab-btn-icon    { margin-right: 6px; }
+        .trips-count-badge {
+            background: #2563eb; color: #fff;
+            border-radius: 20px; padding: 1px 8px;
+            font-size: 0.75rem; margin-left: 4px;
+        }
+        .trip-filter-form { margin-bottom: 0; }
+        .filter-label {
+            font-size: .8rem; font-weight: 600;
+            display: block; margin-bottom: 4px;
+        }
+        .reset-link {
+            padding: 8px 14px;
+            border: 1px solid #d1d5db;
+            border-radius: 7px;
+            background: #fff;
+            cursor: pointer;
+            font-size: .875rem;
+            text-decoration: none;
+            color: #374151;
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+<div class="container history-container">
+        
 
         <!-- Filters -->
         <div class="filters-card">
@@ -112,7 +193,14 @@
             </div>
         </div>
 
-        <!-- Journeys List -->
+        <!-- ── Tab Navigation ─────────────────────────── -->
+        <div class="tab-nav">
+            <button class="tab-btn active" onclick="switchTab('journeys', this)"><i class="fas fa-users tab-btn-icon"></i>Passenger Journeys</button>
+            <button class="tab-btn" onclick="switchTab('trips', this)"><i class="fas fa-check-circle tab-btn-icon"></i>Completed Assessment Trips <span id="tripsCount" class="trips-count-badge">{{ completed_trips|length }}</span></button>
+        </div>
+
+        <!-- ── TAB 1: Passenger Journeys ─────────────── -->
+        <div id="tab-journeys" class="tab-pane active">
         <div class="journeys-list">
             <h3><i class="fas fa-list"></i> Journeys</h3>
 
@@ -165,10 +253,10 @@
                                 {% endif %}
                             </td>
                             <td>
-                                <button class="btn-action" onclick="viewJourneyDetails('{{ journey.journey_id }}')">
+                                <button class="btn-action" title="View journey details" onclick="viewJourneyDetails('{{ journey.journey_id }}')">
                                     <i class="fas fa-eye"></i>
                                 </button>
-                                <button class="btn-action" onclick="exportJourney('{{ journey.journey_id }}')">
+                                <button class="btn-action" title="Export journey" onclick="exportJourney('{{ journey.journey_id }}')">
                                     <i class="fas fa-download"></i>
                                 </button>
                             </td>
@@ -180,12 +268,11 @@
 
             <!-- Pagination -->
             <div class="pagination">
-                <button class="btn-pagination" disabled>
+                <button class="btn-pagination" title="Previous page" disabled>
                     <i class="fas fa-chevron-left"></i>
                 </button>
                 <span class="page-info">Page 1 of 1</span>
-                <button class="btn-pagination">
-                    <i class="fas fa-chevron-right"></i>
+                <button class="btn-pagination" title="Next page">
                 </button>
             </div>
 
@@ -200,6 +287,77 @@
             </div>
             {% endif %}
         </div>
+        </div><!-- /tab-journeys -->
+
+        <!-- ── TAB 2: Completed Assessment Trips ──────── -->
+        <div id="tab-trips" class="tab-pane">
+
+            <form method="GET" action="/history" id="tripFilterForm" class="trip-filter-form">
+                <!-- keep existing filters intact -->
+                <input type="hidden" name="passenger_id" value="{{ filters.passenger_id or '' }}" />
+                <input type="hidden" name="date" value="{{ filters.date or '' }}" />
+                <input type="hidden" name="alert_type" value="{{ filters.alert_type or '' }}" />
+
+                <div class="trips-filter-bar">
+                    <div>
+                        <label class="filter-label">Bus ID / Registration</label>
+                        <select name="trip_bus_id" onchange="this.form.submit()">
+                            <option value="">— All Buses —</option>
+                            {% for bid in trip_bus_ids %}
+                            <option value="{{ bid }}" {% if trip_filters.bus_id == bid %}selected{% endif %}>{{ bid }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="filter-label">Route</label>
+                        <select name="trip_route" onchange="this.form.submit()">
+                            <option value="">— All Routes —</option>
+                            {% for r in trip_routes %}
+                            <option value="{{ r }}" {% if trip_filters.route == r %}selected{% endif %}>{{ r }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <a href="/history#trips" class="reset-link" onclick="document.querySelector('[name=trip_bus_id]').value='';document.querySelector('[name=trip_route]').value='';document.getElementById('tripFilterForm').submit();">Reset</a>
+                </div>
+            </form>
+
+            {% if completed_trips %}
+            <div class="trips-table-wrap">
+                <table class="trips-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Bus ID / Registration</th>
+                            <th>Route</th>
+                            <th>Scheduled Date</th>
+                            <th>Scheduled Time</th>
+                            <th>Completed At</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for trip in completed_trips %}
+                        <tr>
+                            <td>{{ loop.index }}</td>
+                            <td><strong>{{ trip.bus_id }}</strong></td>
+                            <td>{{ trip.route }}</td>
+                            <td>{{ trip.scheduled_date or '—' }}</td>
+                            <td>{{ trip.scheduled_time or '—' }}</td>
+                            <td>{{ trip.completed_at_str }}</td>
+                            <td><span class="badge-done">Done</span></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="no-trips">
+                <i class="fas fa-route"></i>
+                <p>No completed trips yet.</p>
+                <small>Mark an assessment as Done in the <a href="/scheduler">Scheduler</a> to record it here.</small>
+            </div>
+            {% endif %}
+        </div><!-- /tab-trips -->
 
         <!-- Export Options -->
         <div class="export-options">
@@ -223,7 +381,7 @@
         <div class="modal-content wide-modal">
             <div class="modal-header">
                 <h3><i class="fas fa-route"></i> Journey Details</h3>
-                <button class="modal-close" onclick="closeJourneyModal()">
+                <button class="modal-close" title="Close" onclick="closeJourneyModal()">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
@@ -232,9 +390,11 @@
             </div>
         </div>
     </div>
+{% endblock %}
 
-    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
-    <script>
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+<script>
         function resetFilters() {
             document.querySelector('.filter-form').reset();
             window.location.href = '/history';
@@ -310,6 +470,24 @@
                 closeJourneyModal();
             }
         }
+
+        /* ── Tab switching ───────────────────────────── */
+        function switchTab(name, btn) {
+            document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById('tab-' + name).classList.add('active');
+            btn.classList.add('active');
+            // persist active tab in URL hash
+            history.replaceState(null, '', '#' + name);
+        }
+
+        // Restore tab from hash on load
+        (function() {
+            const hash = window.location.hash.replace('#','');
+            if (hash === 'trips') {
+                const btn = document.querySelector('.tab-btn:nth-child(2)');
+                if (btn) switchTab('trips', btn);
+            }
+        })();
     </script>
-</body>
-</html>
+{% endblock %}

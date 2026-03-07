@@ -1,0 +1,887 @@
+{% extends "base.html" %}
+{% block title %}Scheduler{% endblock %}
+{% block page_label %}Scheduler{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+<style>
+    /* ─── Reset & Base ──────────────────────────────────────── */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f3f4f8;
+      color: #222;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ─── Top Navbar ─────────────────────────────────────────── */
+    .topbar {
+      background: #fff;
+      border-bottom: 1px solid #e5e7eb;
+      padding: 0 24px;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 1px 4px rgba(0,0,0,.06);
+    }
+    .topbar-brand {
+      font-weight: 700;
+      font-size: 1.1rem;
+      color: #111;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .topbar-brand .brand-icon {
+      width: 32px; height: 32px;
+      background: #2563eb;
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      color: #fff; font-size: 14px;
+    }
+    .topbar-search {
+      flex: 1; max-width: 380px; margin: 0 40px;
+      position: relative;
+    }
+    .topbar-search input {
+      width: 100%;
+      padding: 8px 16px 8px 38px;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      background: #f9fafb;
+      font-size: 0.875rem;
+      outline: none;
+    }
+    .topbar-search .search-icon {
+      position: absolute; left: 12px; top: 50%;
+      transform: translateY(-50%);
+      color: #9ca3af; font-size: 13px;
+    }
+    .topbar-right { display: flex; align-items: center; gap: 16px; }
+    .avatar {
+      width: 36px; height: 36px;
+      background: #6366f1;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      color: #fff; font-weight: 700; font-size: 0.85rem;
+      cursor: pointer;
+    }
+    .notif-btn {
+      width: 36px; height: 36px;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; color: #6b7280;
+      background: #fff;
+      position: relative;
+    }
+    .notif-dot {
+      width: 8px; height: 8px;
+      background: #ef4444;
+      border-radius: 50%;
+      position: absolute; top: 6px; right: 6px;
+    }
+
+    /* ─── Layout ─────────────────────────────────────────────── */
+    .app-layout { display: flex; flex: 1; }
+
+    /* ─── Sidebar ────────────────────────────────────────────── */
+    .sidebar {
+      width: 200px;
+      background: #fff;
+      border-right: 1px solid #e5e7eb;
+      padding: 20px 0;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      flex-shrink: 0;
+    }
+    .nav-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 20px;
+      font-size: 0.875rem;
+      color: #6b7280;
+      cursor: pointer;
+      border-radius: 0;
+      text-decoration: none;
+      transition: background 0.15s, color 0.15s;
+    }
+    .nav-item:hover { background: #f3f4f8; color: #111; }
+    .nav-item.active {
+      background: #eff6ff;
+      color: #2563eb;
+      font-weight: 600;
+      border-right: 3px solid #2563eb;
+    }
+    .nav-item i { width: 18px; text-align: center; }
+
+    /* ─── Main Content ───────────────────────────────────────── */
+    .main-content {
+      flex: 1;
+      padding: 28px;
+      overflow-y: auto;
+    }
+
+    /* ─── 2-col grid for top sections ───────────────────────── */
+    .top-grid {
+      display: grid;
+      grid-template-columns: 1fr 1.3fr;
+      gap: 24px;
+      margin-bottom: 24px;
+    }
+
+    /* ─── Card Base ──────────────────────────────────────────── */
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 1px 4px rgba(0,0,0,.06);
+      border: 1px solid #f0f0f0;
+    }
+    .card-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #111;
+      margin-bottom: 20px;
+    }
+
+    /* ─── Form Elements ──────────────────────────────────────── */
+    .form-label {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #374151;
+      margin-bottom: 6px;
+      display: block;
+    }
+    .form-control, .form-select {
+      width: 100%;
+      padding: 9px 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      background: #fff;
+      color: #111;
+      outline: none;
+      transition: border 0.15s, box-shadow 0.15s;
+    }
+    .form-control:focus, .form-select:focus {
+      border-color: #2563eb;
+      box-shadow: 0 0 0 3px rgba(37,99,235,.1);
+    }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .form-group { margin-bottom: 16px; }
+    .input-icon-wrap { position: relative; }
+    .input-icon-wrap .form-control { padding-left: 36px; }
+    .input-icon-wrap .icon {
+      position: absolute; left: 12px; top: 50%;
+      transform: translateY(-50%);
+      color: #9ca3af; font-size: 13px;
+    }
+    .btn-save {
+      width: 100%;
+      padding: 11px;
+      background: #2563eb;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 4px;
+      transition: background 0.15s;
+    }
+    .btn-save:hover { background: #1d4ed8; }
+
+    /* ─── Upcoming Assessments ───────────────────────────────── */
+    .upcoming-scroll {
+      max-height: 380px;
+      overflow-y: auto;
+      padding-right: 2px;
+    }
+    .bus-group { margin-bottom: 16px; }
+    .bus-group-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 14px;
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: #111;
+    }
+    .bus-group-header:hover { background: #f3f4f8; }
+    .bus-group-body { padding: 0 0 0 0; }
+    .assessment-row {
+      display: grid;
+      grid-template-columns: 2fr 1.1fr 1fr auto;
+      gap: 10px;
+      align-items: center;
+      padding: 10px 14px;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      margin-top: 8px;
+      background: #fff;
+      font-size: 0.8rem;
+    }
+    .assessment-row .field-label {
+      font-size: 0.68rem;
+      color: #9ca3af;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      margin-bottom: 2px;
+    }
+    .assessment-row .field-val { font-weight: 600; color: #111; }
+    .row-actions { display: flex; gap: 6px; }
+    .action-btn {
+      width: 30px; height: 30px;
+      border: 1px solid #e5e7eb;
+      border-radius: 7px;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      font-size: 13px;
+      transition: background 0.15s, border 0.15s;
+      background: #fff;
+    }
+    .action-btn.edit { color: #3b82f6; }
+    .action-btn.edit:hover { background: #eff6ff; border-color: #3b82f6; }
+    .action-btn.del { color: #ef4444; }
+    .action-btn.del:hover { background: #fef2f2; border-color: #ef4444; }
+    .action-btn.done { color: #22c55e; }
+    .action-btn.done:hover { background: #f0fdf4; border-color: #22c55e; }
+    .badge-status {
+      display: inline-block;
+      padding: 3px 9px;
+      border-radius: 20px;
+      font-size: 0.72rem;
+      font-weight: 600;
+    }
+    .badge-status.scheduled { background: #dbeafe; color: #1d4ed8; }
+    .badge-status.done { background: #dcfce7; color: #15803d; }
+    .badge-status.cancelled { background: #fee2e2; color: #b91c1c; }
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: #9ca3af;
+    }
+    .empty-state i { font-size: 2.5rem; margin-bottom: 12px; }
+
+    /* ─── Free Time Gaps ──────────────────────────────────────── */
+    .free-time-section { margin-top: 24px; }
+    .filter-row {
+      display: grid; grid-template-columns: 1fr 1fr auto;
+      gap: 14px; align-items: flex-end;
+      margin-bottom: 20px;
+    }
+    .btn-check-gaps {
+      padding: 9px 20px;
+      background: #2563eb;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+      height: 38px;
+    }
+    .btn-check-gaps:hover { background: #1d4ed8; }
+    .gaps-list { list-style: none; padding: 0; }
+    .gap-item {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 14px;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      margin-bottom: 8px;
+      background: #fff;
+      font-size: 0.875rem;
+    }
+    .gap-item span { color: #374151; }
+    .badge-avail {
+      background: #dcfce7;
+      color: #15803d;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    .gaps-placeholder {
+      text-align: center; padding: 28px;
+      color: #9ca3af; font-size: 0.875rem;
+      background: #f9fafb;
+      border-radius: 8px;
+      border: 1px dashed #d1d5db;
+    }
+
+    /* ─── Edit Modal ─────────────────────────────────────────── */
+    .modal-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,.35);
+      align-items: center; justify-content: center;
+      z-index: 500;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal-box {
+      background: #fff;
+      border-radius: 12px;
+      padding: 28px;
+      width: 94%; max-width: 440px;
+      box-shadow: 0 8px 30px rgba(0,0,0,.15);
+    }
+    .modal-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 20px;
+    }
+    .modal-header h3 { font-size: 1rem; font-weight: 700; }
+    .modal-close { background: none; border: none; font-size: 18px; cursor: pointer; color: #6b7280; }
+    .modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+    .btn-cancel {
+      padding: 8px 18px;
+      border: 1px solid #d1d5db;
+      border-radius: 7px;
+      background: #fff;
+      cursor: pointer;
+      font-size: 0.875rem;
+    }
+    .btn-update {
+      padding: 8px 18px;
+      background: #2563eb; color: #fff;
+      border: none; border-radius: 7px;
+      cursor: pointer; font-size: 0.875rem; font-weight: 600;
+    }
+
+    /* ─── Toast ──────────────────────────────────────────────── */
+    #toast {
+      position: fixed; bottom: 28px; right: 28px;
+      background: #111; color: #fff;
+      padding: 12px 20px;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.3s;
+      z-index: 1000;
+      max-width: 320px;
+    }
+    #toast.show { opacity: 1; }
+    #toast.success { background: #15803d; }
+    #toast.error { background: #b91c1c; }
+
+    /* ─── Scrollbar ──────────────────────────────────────────── */
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: #f3f4f8; }
+    ::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 4px; }
+
+    @media (max-width: 900px) {
+      .top-grid { grid-template-columns: 1fr; }
+      .filter-row { grid-template-columns: 1fr; }
+      .sidebar { display: none; }
+    }
+
+    /* ─── Utility ────────────────────────────────────────────── */
+    .brand-subtitle { color: #9ca3af; font-weight: 400; margin-left: 4px; }
+    .btn-icon { margin-right: 6px; }
+    .modal-edit-icon { margin-right: 8px; color: #2563eb; }
+    .filter-group-no-margin { margin: 0; }
+  </style>
+{% endblock %}
+
+{% block content %}
+<!-- ─── Top Navbar ─────────────────────────────────────────── -->
+<header class="topbar">
+  <div class="topbar-brand">
+    <div class="brand-icon"><i class="fas fa-bus"></i></div>
+    BusOps <span class="brand-subtitle">| Assessment Manager</span>
+  </div>
+  <div class="topbar-search">
+    <i class="fas fa-search search-icon"></i>
+    <input type="text" placeholder="Search…" />
+  </div>
+  <div class="topbar-right">
+    <div class="notif-btn"><i class="fas fa-bell"></i><div class="notif-dot"></div></div>
+    <div class="avatar">SM</div>
+  </div>
+</header>
+
+<div class="app-layout">
+
+  <!-- ─── Sidebar ─────────────────────────────────────────── -->
+  <nav class="sidebar">
+    <a class="nav-item active" href="/scheduler"><i class="fas fa-th-large"></i> Dashboard</a>
+    <a class="nav-item" href="#"><i class="fas fa-calendar-alt"></i> Calendar</a>
+    <a class="nav-item" href="/history"><i class="fas fa-history"></i> History</a>
+    <a class="nav-item" href="#"><i class="fas fa-bus"></i> Buses</a>
+    <a class="nav-item" href="#"><i class="fas fa-cog"></i> Settings</a>
+  </nav>
+
+  <!-- ─── Main ─────────────────────────────────────────────── -->
+  <main class="main-content">
+
+    <!-- ── Top 2-col grid ──────────────────────────────────── -->
+    <div class="top-grid">
+
+      <!-- Left: Create New Schedule -->
+      <div class="card">
+        <div class="card-title">Create New Schedule</div>
+
+        <div class="form-group">
+          <label class="form-label">Bus Registration / ID</label>
+          <input id="inp_bus_id" class="form-control" placeholder="Enter Registration (e.g., WP-BC-1234)" />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Select Route</label>
+          <select id="inp_route" class="form-select" title="Select Route">
+            <option value="">— Select Route —</option>
+            <option>Colombo ↔ Kandy</option>
+            <option>Colombo ↔ Galle</option>
+            <option>Colombo ↔ Jaffna</option>
+            <option>Colombo ↔ Matara</option>
+            <option>Colombo ↔ Kurunegala</option>
+            <option>Colombo ↔ Negombo</option>
+            <option>Kandy ↔ Nuwara Eliya</option>
+            <option>Kandy ↔ Badulla</option>
+            <option>Galle ↔ Matara</option>
+            <option>Colombo ↔ Ratnapura</option>
+            <option>Colombo ↔ Anuradhapura</option>
+            <option>Colombo ↔ Polonnaruwa</option>
+          </select>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Date</label>
+            <div class="input-icon-wrap">
+              <i class="fas fa-calendar icon"></i>
+              <input id="inp_date" type="date" class="form-control" title="Schedule Date" placeholder="Select date" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Time</label>
+            <div class="input-icon-wrap">
+              <i class="fas fa-clock icon"></i>
+              <input id="inp_time" type="time" class="form-control" title="Schedule Time" placeholder="Select time" />
+            </div>
+          </div>
+        </div>
+
+        <button class="btn-save" onclick="saveSchedule()">
+          <i class="fas fa-save btn-icon"></i> Save Assessment Schedule
+        </button>
+      </div>
+
+      <!-- Right: Upcoming Assessments -->
+      <div class="card">
+        <div class="card-title">Upcoming Assessments</div>
+        <div class="upcoming-scroll" id="upcomingContainer">
+          <div class="empty-state">
+            <i class="fas fa-calendar-check"></i>
+            <p>No upcoming assessments yet.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Route Availability & Free Time Gaps ─────────────── -->
+    <div class="card free-time-section">
+      <div class="card-title">Route Availability &amp; Free Time Gaps</div>
+      <div class="filter-row">
+        <div class="form-group filter-group-no-margin">
+          <label class="form-label">Select Route</label>
+          <select id="ft_route" class="form-select" title="Filter by Route">
+            <option value="">— Select Route —</option>
+            <option>Colombo ↔ Kandy</option>
+            <option>Colombo ↔ Galle</option>
+            <option>Colombo ↔ Jaffna</option>
+            <option>Colombo ↔ Matara</option>
+            <option>Colombo ↔ Kurunegala</option>
+            <option>Colombo ↔ Negombo</option>
+            <option>Kandy ↔ Nuwara Eliya</option>
+            <option>Kandy ↔ Badulla</option>
+            <option>Galle ↔ Matara</option>
+            <option>Colombo ↔ Ratnapura</option>
+            <option>Colombo ↔ Anuradhapura</option>
+            <option>Colombo ↔ Polonnaruwa</option>
+          </select>
+        </div>
+        <div class="form-group filter-group-no-margin">
+          <label class="form-label">Select Date</label>
+          <div class="input-icon-wrap">
+            <i class="fas fa-calendar icon"></i>
+            <input id="ft_date" type="date" class="form-control" title="Filter Date" placeholder="Select date" />
+          </div>
+        </div>
+        <button class="btn-check-gaps" onclick="loadFreeTime()">
+          <i class="fas fa-search btn-icon"></i> Check
+        </button>
+      </div>
+      <div id="freeTimeResults">
+        <div class="gaps-placeholder">
+          <i class="fas fa-info-circle btn-icon"></i>
+          Select a route and date to see available time gaps.
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ─── Edit Modal ────────────────────────────────────────── -->
+<div class="modal-overlay" id="editModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3><i class="fas fa-pencil-alt modal-edit-icon"></i>Edit Schedule</h3>
+      <button class="modal-close" onclick="closeEdit()">&times;</button>
+    </div>
+    <input type="hidden" id="edit_id" />
+    <div class="form-group">
+      <label class="form-label">Bus Registration / ID</label>
+      <input id="edit_bus_id" class="form-control" />
+    </div>
+    <div class="form-group">
+      <label class="form-label">Route</label>
+      <select id="edit_route" class="form-select">
+        <option>Colombo ↔ Kandy</option>
+        <option>Colombo ↔ Galle</option>
+        <option>Colombo ↔ Jaffna</option>
+        <option>Colombo ↔ Matara</option>
+        <option>Colombo ↔ Kurunegala</option>
+        <option>Colombo ↔ Negombo</option>
+        <option>Kandy ↔ Nuwara Eliya</option>
+        <option>Kandy ↔ Badulla</option>
+        <option>Galle ↔ Matara</option>
+        <option>Colombo ↔ Ratnapura</option>
+        <option>Colombo ↔ Anuradhapura</option>
+        <option>Colombo ↔ Polonnaruwa</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Date</label>
+        <input id="edit_date" type="date" class="form-control" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Time</label>
+        <input id="edit_time" type="time" class="form-control" />
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeEdit()">Cancel</button>
+      <button class="btn-update" onclick="saveEdit()">Update Schedule</button>
+    </div>
+  </div>
+</div>
+
+<!-- ─── Toast ─────────────────────────────────────────────── -->
+<div id="toast"></div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+/* ──────────────────────────────────────────────────────────── *
+ *  State
+ * ──────────────────────────────────────────────────────────── */
+let schedules = [];
+
+/* ──────────────────────────────────────────────────────────── *
+ *  Init
+ * ──────────────────────────────────────────────────────────── */
+document.addEventListener('DOMContentLoaded', () => {
+  // Default date to today
+  const today = new Date().toISOString().slice(0, 10);
+  document.getElementById('inp_date').value = today;
+  document.getElementById('ft_date').value  = today;
+  loadSchedules();
+});
+
+/* ──────────────────────────────────────────────────────────── *
+ *  API helpers
+ * ──────────────────────────────────────────────────────────── */
+async function apiFetch(url, opts = {}) {
+  const res = await fetch(url, {
+    headers: { 'Content-Type': 'application/json' },
+    ...opts
+  });
+  return res.json();
+}
+
+/* ──────────────────────────────────────────────────────────── *
+ *  Load schedules
+ * ──────────────────────────────────────────────────────────── */
+async function loadSchedules() {
+  try {
+    const data = await apiFetch('/api/schedules');
+    schedules = data.schedules || [];
+    renderUpcoming();
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+/* ──────────────────────────────────────────────────────────── *
+ *  Render Upcoming Assessments (grouped by bus_id)
+ * ──────────────────────────────────────────────────────────── */
+function renderUpcoming() {
+  const container = document.getElementById('upcomingContainer');
+  const upcoming = schedules.filter(s => s.status !== 'Done' && s.status !== 'Cancelled');
+
+  if (!upcoming.length) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <i class="fas fa-calendar-check"></i>
+        <p>No upcoming assessments yet.</p>
+      </div>`;
+    return;
+  }
+
+  // Group by bus_id
+  const groups = {};
+  upcoming.forEach(s => {
+    if (!groups[s.bus_id]) groups[s.bus_id] = [];
+    groups[s.bus_id].push(s);
+  });
+
+  let html = '';
+  Object.entries(groups).forEach(([busId, items]) => {
+    html += `
+      <div class="bus-group">
+        <div class="bus-group-header" onclick="toggleGroup(this)">
+          <span>Bus: ${escHtml(busId)} (${items.length} Upcoming)</span>
+          <i class="fas fa-chevron-up"></i>
+        </div>
+        <div class="bus-group-body">`;
+    items.forEach(s => {
+      const badge = `<span class="badge-status ${s.status === 'Done' ? 'done' : 'scheduled'}">${escHtml(s.status)}</span>`;
+      const dateStr = s.scheduled_date || '—';
+      const timeStr = s.scheduled_time ? fmtTime(s.scheduled_time) : '—';
+      html += `
+          <div class="assessment-row" id="row-${s.id}">
+            <div>
+              <div class="field-label">Route</div>
+              <div class="field-val">${escHtml(s.route)}</div>
+            </div>
+            <div>
+              <div class="field-label">Date</div>
+              <div class="field-val">${dateStr}</div>
+            </div>
+            <div>
+              ${s.scheduled_time
+                ? `<div class="field-label">Time</div><div class="field-val">${timeStr}</div>`
+                : badge}
+            </div>
+            <div class="row-actions">
+              <button class="action-btn edit" title="Edit" onclick="openEdit('${s.id}')"><i class="fas fa-pencil-alt"></i></button>
+              <button class="action-btn del" title="Delete" onclick="deleteSchedule('${s.id}')"><i class="fas fa-trash"></i></button>
+              <button class="action-btn done" title="Mark as Done" onclick="markDone('${s.id}')"><i class="fas fa-check"></i></button>
+            </div>
+          </div>`;
+    });
+    html += `</div></div>`;
+  });
+  container.innerHTML = html;
+}
+
+function toggleGroup(header) {
+  const body = header.nextElementSibling;
+  const icon = header.querySelector('i');
+  if (body.style.display === 'none') {
+    body.style.display = '';
+    icon.className = 'fas fa-chevron-up';
+  } else {
+    body.style.display = 'none';
+    icon.className = 'fas fa-chevron-down';
+  }
+}
+
+/* ──────────────────────────────────────────────────────────── *
+ *  Save Schedule (Create)
+ * ──────────────────────────────────────────────────────────── */
+async function saveSchedule() {
+  const bus_id = document.getElementById('inp_bus_id').value.trim();
+  const route  = document.getElementById('inp_route').value;
+  const date   = document.getElementById('inp_date').value;
+  const time   = document.getElementById('inp_time').value;
+
+  if (!bus_id || !route || !date) {
+    showToast('Please fill in Bus ID, Route and Date.', 'error');
+    return;
+  }
+
+  try {
+    const res = await apiFetch('/api/schedules', {
+      method: 'POST',
+      body: JSON.stringify({ bus_id, route, scheduled_date: date, scheduled_time: time })
+    });
+    if (res.success) {
+      showToast('Schedule saved successfully!', 'success');
+      document.getElementById('inp_bus_id').value = '';
+      document.getElementById('inp_route').value  = '';
+      document.getElementById('inp_time').value   = '';
+      loadSchedules();
+    } else {
+      showToast(res.error || 'Failed to save.', 'error');
+    }
+  } catch (e) {
+    showToast('Network error.', 'error');
+  }
+}
+
+/* ──────────────────────────────────────────────────────────── *
+ *  Delete Schedule
+ * ──────────────────────────────────────────────────────────── */
+async function deleteSchedule(id) {
+  if (!confirm('Delete this schedule?')) return;
+  try {
+    const res = await apiFetch(`/api/schedules/${id}`, { method: 'DELETE' });
+    if (res.success) {
+      showToast('Schedule deleted.', 'success');
+      loadSchedules();
+    }
+  } catch (e) {
+    showToast('Failed to delete.', 'error');
+  }
+}
+
+/* ──────────────────────────────────────────────────────────── *
+ *  Mark as Done
+ * ──────────────────────────────────────────────────────────── */
+async function markDone(id) {
+  if (!confirm('Mark this assessment as completed and save to records?')) return;
+  try {
+    const res = await apiFetch(`/api/schedules/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status: 'Done' })
+    });
+    if (res.success) {
+      showToast('Assessment marked as Done and saved!', 'success');
+      loadSchedules();
+    }
+  } catch (e) {
+    showToast('Failed to update.', 'error');
+  }
+}
+
+/* ──────────────────────────────────────────────────────────── *
+ *  Edit Modal
+ * ──────────────────────────────────────────────────────────── */
+function openEdit(id) {
+  const s = schedules.find(x => x.id === id);
+  if (!s) return;
+  document.getElementById('edit_id').value      = s.id;
+  document.getElementById('edit_bus_id').value  = s.bus_id;
+  document.getElementById('edit_route').value   = s.route;
+  document.getElementById('edit_date').value    = s.scheduled_date || '';
+  document.getElementById('edit_time').value    = s.scheduled_time || '';
+  document.getElementById('editModal').classList.add('open');
+}
+function closeEdit() {
+  document.getElementById('editModal').classList.remove('open');
+}
+async function saveEdit() {
+  const id     = document.getElementById('edit_id').value;
+  const bus_id = document.getElementById('edit_bus_id').value.trim();
+  const route  = document.getElementById('edit_route').value;
+  const date   = document.getElementById('edit_date').value;
+  const time   = document.getElementById('edit_time').value;
+  if (!bus_id || !route || !date) {
+    showToast('Bus ID, Route and Date are required.', 'error');
+    return;
+  }
+  try {
+    const res = await apiFetch(`/api/schedules/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ bus_id, route, scheduled_date: date, scheduled_time: time, status: 'Scheduled' })
+    });
+    if (res.success) {
+      showToast('Schedule updated!', 'success');
+      closeEdit();
+      loadSchedules();
+    }
+  } catch (e) {
+    showToast('Failed to update.', 'error');
+  }
+}
+
+/* ──────────────────────────────────────────────────────────── *
+ *  Free Time Gaps
+ * ──────────────────────────────────────────────────────────── */
+async function loadFreeTime() {
+  const route = document.getElementById('ft_route').value;
+  const date  = document.getElementById('ft_date').value;
+  if (!route || !date) {
+    showToast('Select both a route and a date.', 'error');
+    return;
+  }
+  try {
+    const res  = await apiFetch(`/api/free_time?route=${encodeURIComponent(route)}&date=${date}`);
+    const div  = document.getElementById('freeTimeResults');
+    const gaps = res.gaps || [];
+
+    // Show human-readable date
+    const dateLabel = new Date(date + 'T00:00:00').toLocaleDateString('en-GB', {day:'numeric',month:'short'});
+    const routeShort = route.split('↔').map(r => r.trim()).join('');
+
+    let html = `
+      <p style="font-size:.875rem;color:#374151;margin-bottom:14px;">
+        <strong>Available Time Gaps (No Schedule)</strong> for
+        <em>${escHtml(route)}</em> on <em>${dateLabel}</em>
+      </p>`;
+
+    if (!gaps.length) {
+      html += `<div class="gaps-placeholder">No free gaps — all time slots are scheduled.</div>`;
+    } else {
+      html += `<ul class="gaps-list">`;
+      gaps.forEach((g, i) => {
+        html += `
+          <li class="gap-item">
+            <span>${i + 1}. ${g.start} – ${g.end}</span>
+            <span class="badge-avail">Available</span>
+          </li>`;
+      });
+      html += `</ul>`;
+    }
+    div.innerHTML = html;
+  } catch (e) {
+    showToast('Failed to load free time data.', 'error');
+  }
+}
+
+/* ──────────────────────────────────────────────────────────── *
+ *  Helpers
+ * ──────────────────────────────────────────────────────────── */
+function fmtTime(t) {
+  if (!t) return '—';
+  const [hh, mm] = t.split(':');
+  const h = parseInt(hh), ampm = h >= 12 ? 'PM' : 'AM';
+  return `${(h % 12 || 12).toString().padStart(2,'0')}:${mm} ${ampm}`;
+}
+
+function escHtml(s) {
+  if (!s) return '';
+  return String(s)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;');
+}
+
+let toastTimer;
+function showToast(msg, type = 'default') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `show ${type}`;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.className = ''; }, 3200);
+}
+
+// Close modal on backdrop click
+document.getElementById('editModal').addEventListener('click', function(e) {
+  if (e.target === this) closeEdit();
+});
+</script>
+{% endblock %}

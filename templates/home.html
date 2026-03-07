@@ -1,421 +1,439 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Travel Agent Supporting Tool</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <style>
+{% extends "base.html" %}
+{% block title %}Home — Travel Agent Tool{% endblock %}
+{% block page_label %}Home{% endblock %}
+
+{% block extra_head %}
+<style>
+        /* ══ Variables ══ */
         :root {
-            --primary-color: #2c3e50;
-            --secondary-color: #3498db;
-            --accent-color: #e74c3c;
-            --light-color: #ecf0f1;
-            --success-color: #2ecc71;
-            --warning-color: #f39c12;
-            --info-color: #17a2b8;
+            --sidebar-w: 260px;
+            --sidebar-bg: #0f172a;
+            --accent:  #3b82f6;
+            --accent2: #10b981;
+            --page-bg: #f1f5f9;
+            --card-r:  16px;
         }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: var(--page-bg);
             min-height: 100vh;
-            color: #333;
-        }
-
-        .navbar-brand {
-            font-weight: bold;
-            font-size: 1.5rem;
-        }
-
-        .hero-section {
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 20px;
-            padding: 3rem;
-            margin-top: 2rem;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-        }
-
-        .main-title {
-            text-align: center;
-            font-size: 2.8rem;
-            font-weight: bold;
-            color: var(--primary-color);
-            margin-bottom: 1rem;
-            padding-bottom: 1rem;
-            border-bottom: 3px solid var(--secondary-color);
-        }
-
-        .subtitle {
-            text-align: center;
-            font-size: 1.2rem;
-            color: #666;
-            margin-bottom: 2rem;
-            max-width: 800px;
-            margin-left: auto;
-            margin-right: auto;
-        }
-
-        /* Updated Feature Grid for Center Alignment */
-        .feature-grid {
             display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            gap: 2rem;
-            margin-top: 2rem;
+            color: #334155;
         }
 
-        .feature-card {
-            background: white;
-            border-radius: 15px;
-            padding: 2rem;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-            transition: all 0.3s ease;
-            border: 1px solid #eee;
-            flex: 1 1 300px;
-            max-width: 380px; /* Keeps cards uniform */
-            display: flex;
-            flex-direction: column;
+        /* ══ SIDEBAR ══ */
+        .sidebar {
+            position: fixed; top: 0; left: 0;
+            width: var(--sidebar-w); height: 100vh;
+            background: var(--sidebar-bg);
+            display: flex; flex-direction: column;
+            z-index: 100; overflow-y: auto;
         }
-
-        .feature-card:hover {
-            transform: translateY(-10px);
-            box-shadow: 0 15px 30px rgba(0,0,0,0.15);
+        .sb-brand {
+            padding: 20px 18px 14px;
+            display: flex; align-items: center; gap: 12px;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
         }
-
-        /* Pushes the button to the bottom of the card */
-        .feature-card .feature-button {
-            margin-top: auto;
+        .sb-brand-icon {
+            width: 40px; height: 40px; border-radius: 10px; flex-shrink: 0;
+            background: linear-gradient(135deg, #3b82f6, #6366f1);
+            display: flex; align-items: center; justify-content: center;
+            color: #fff; font-size: 1.1rem;
         }
+        .sb-brand-text strong { color: #fff; font-size: 0.92rem; display: block; line-height: 1.2; }
+        .sb-brand-text span   { color: rgba(255,255,255,0.4); font-size: 0.7rem; }
 
-        .dashboard-full-card {
-            background: white;
-            border-radius: 15px;
-            padding: 2rem;
-            margin: 2rem 0;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-            border-top: 5px solid var(--secondary-color);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 20px;
+        /* System status block */
+        .sb-status-block {
+            padding: 18px 18px 14px;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
         }
-
-        .feature-icon {
-            font-size: 3rem;
-            margin-bottom: 1.5rem;
-            display: block;
-            text-align: center;
+        .sb-status-title {
+            font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.8px;
+            color: rgba(255,255,255,0.35); margin-bottom: 10px;
         }
-
-        .feature-title {
-            font-size: 1.5rem;
-            font-weight: 600;
-            margin-bottom: 1rem;
-            color: var(--primary-color);
-            text-align: center;
+        .sb-status-badge {
+            display: flex; align-items: center; gap: 8px;
+            background: rgba(16,185,129,0.12); border: 1px solid rgba(16,185,129,0.25);
+            border-radius: 9px; padding: 8px 12px;
         }
-
-        .feature-description {
-            color: #666;
-            line-height: 1.6;
-            margin-bottom: 1.5rem;
-            text-align: center;
+        .sb-pulse {
+            width: 8px; height: 8px; border-radius: 50%;
+            background: #10b981; flex-shrink: 0;
+            animation: pulse-dot 2s infinite;
         }
-
-        .feature-button {
-            width: 100%;
-            padding: 0.8rem;
-            font-size: 1.1rem;
-            font-weight: 600;
-            border-radius: 10px;
-            border: none;
-            transition: all 0.3s ease;
-            text-transform: uppercase;
-            letter-spacing: 1px;
+        @keyframes pulse-dot { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
+        .sb-status-badge span { color: #6ee7b7; font-size: 0.78rem; font-weight: 600; }
+        .sb-mini-stats {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-top: 10px;
         }
-
-        .feature-button:hover {
-            transform: scale(1.05);
+        .sb-mini-stat {
+            background: rgba(255,255,255,0.05); border-radius: 9px;
+            padding: 7px 9px; text-align: center;
         }
+        .sb-mini-stat .msv { color: #fff; font-size: 0.77rem; font-weight: 600; }
+        .sb-mini-stat .msl { color: rgba(255,255,255,0.38); font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 1px; }
 
-        .card-passenger { border-top: 5px solid var(--success-color); }
-        .card-driver { border-top: 5px solid var(--warning-color); }
-        .card-drunkard { border-top: 5px solid var(--accent-color); }
-        .card-profit { border-top: 5px solid var(--info-color); }
-        .card-other { border-top: 5px solid #9b59b6; }
-
-        .icon-passenger { color: var(--success-color); }
-        .icon-driver { color: var(--warning-color); }
-        .icon-drunkard { color: var(--accent-color); }
-        .icon-profit { color: var(--info-color); }
-        .icon-other { color: #9b59b6; }
-        .icon-dashboard { color: var(--secondary-color); }
-
-        .system-overview {
-            background: rgba(255, 255, 255, 0.9);
-            border-radius: 15px;
-            padding: 2rem;
-            margin: 2rem 0;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        /* Nav */
+        .sb-nav { padding: 14px 12px; flex: 1; }
+        .sb-nav-label {
+            font-size: 0.63rem; text-transform: uppercase; letter-spacing: 1px;
+            color: rgba(255,255,255,0.28); padding: 0 8px; margin-bottom: 6px;
         }
-
-        .overview-title {
-            font-size: 1.8rem;
-            color: var(--primary-color);
-            margin-bottom: 1.5rem;
-            text-align: center;
+        .sb-nav-label-spaced { margin-top: 14px; }
+        .sb-btn {
+            display: flex; align-items: center; gap: 11px; width: 100%;
+            padding: 10px 12px; border-radius: 10px; border: none;
+            background: transparent; color: rgba(255,255,255,0.55); font-size: 0.83rem;
+            cursor: pointer; transition: all 0.18s; margin-bottom: 3px; text-align: left;
         }
-
-        .overview-description {
-            font-size: 1.1rem;
-            line-height: 1.7;
-            color: #555;
-            text-align: justify;
+        .sb-btn:hover { background: rgba(255,255,255,0.07); color: #fff; }
+        .sb-btn.active { background: rgba(59,130,246,0.18); color: #fff; font-weight: 600; }
+        .sb-btn.active .sb-btn-icon { background: var(--accent); color: #fff; }
+        .sb-btn-icon {
+            width: 30px; height: 30px; border-radius: 7px; flex-shrink: 0;
+            background: rgba(255,255,255,0.08);
+            display: flex; align-items: center; justify-content: center; font-size: 0.82rem;
+            transition: background 0.18s;
         }
+        .sb-footer { padding: 10px 12px 16px; border-top: 1px solid rgba(255,255,255,0.06); }
+        .sb-btn-sm { font-size: 0.78rem; }
+        .sb-btn-icon-green  { background: rgba(16,185,129,0.15); color: #10b981; }
+        .sb-btn-icon-indigo { background: rgba(99,102,241,0.15); color: #6366f1; }
 
-        .quick-stats {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1.5rem;
-            margin-top: 3rem;
+        /* ══ MAIN ══ */
+        .main { margin-left: var(--sidebar-w); flex: 1; min-width: 0; padding: 26px 26px 60px; }
+
+        /* Page header */
+        .pg-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 22px; }
+        .pg-title h2 { font-size: 1.35rem; font-weight: 700; color: #1e293b; margin-bottom: 2px; }
+        .pg-title p  { color: #64748b; font-size: 0.82rem; }
+        .pg-actions { display: flex; gap: 9px; align-items: center; }
+
+        /* Live pill */
+        .live-pill {
+            display: inline-flex; align-items: center; gap: 6px;
+            background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.25);
+            padding: 6px 14px; border-radius: 99px; font-size: 0.78rem; color: #059669; font-weight: 600;
         }
+        .live-dot { width: 7px; height: 7px; border-radius: 50%; background: #10b981; animation: pulse-dot 2s infinite; }
 
-        .stat-card {
-            background: white;
-            border-radius: 15px;
-            padding: 1.5rem;
-            text-align: center;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-            transition: transform 0.3s ease;
+        /* KPI row */
+        .kpi-row { display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; margin-bottom: 22px; }
+        .kpi-c {
+            background: #fff; border-radius: var(--card-r); padding: 16px 18px;
+            box-shadow: 0 1px 5px rgba(0,0,0,0.05);
+            display: flex; align-items: center; gap: 13px; transition: box-shadow 0.2s;
         }
-
-        .stat-card:hover { transform: translateY(-5px); }
-
-        .stat-number {
-            font-size: 2.5rem;
-            font-weight: bold;
-            color: var(--secondary-color);
+        .kpi-c:hover { box-shadow: 0 5px 18px rgba(0,0,0,0.09); }
+        .kpi-ic {
+            width: 46px; height: 46px; border-radius: 12px; flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center; font-size: 1.1rem;
         }
+        .kpi-ic.blue   { background: #eff6ff; color: var(--accent); }
+        .kpi-ic.green  { background: #f0fdf4; color: var(--accent2); }
+        .kpi-ic.yellow { background: #fefce8; color: #ca8a04; }
+        .kpi-ic.red    { background: #fef2f2; color: #ef4444; }
+        .kpi-body .kv  { font-size: 1.2rem; font-weight: 700; color: #1e293b; line-height: 1; }
+        .kpi-body .kl  { font-size: 0.7rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.6px; margin-top: 3px; }
 
-        .stat-label {
-            font-size: 0.9rem;
-            color: #666;
-            text-transform: uppercase;
-            letter-spacing: 1px;
+        /* Card */
+        .pc { background: #fff; border-radius: var(--card-r); box-shadow: 0 1px 5px rgba(0,0,0,0.05); overflow: hidden; margin-bottom: 18px; }
+        .pc-hdr { padding: 14px 18px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid #f1f5f9; }
+        .pc-hdr-ic { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; }
+        .pc-hdr-ic-blue   { background: #eff6ff; color: var(--accent); }
+        .pc-hdr-ic-green  { background: #f0fdf4; color: var(--accent2); }
+        .pc-hdr-ic-yellow { background: #fefce8; color: #ca8a04; }
+        .pc-hdr-ic-purple { background: #f5f3ff; color: #7c3aed; }
+        .pc-hdr h5 { font-size: 0.9rem; font-weight: 700; color: #1e293b; margin: 0; }
+        .pc-hdr .pc-hdr-right { margin-left: auto; }
+        .pc-body { padding: 18px; }
+
+        /* Feature grid */
+        .feat-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 16px; }
+        .feat-card {
+            background: #fff; border-radius: var(--card-r);
+            box-shadow: 0 1px 5px rgba(0,0,0,0.05); padding: 22px 20px 18px;
+            display: flex; flex-direction: column;
+            border-top: 4px solid #e2e8f0;
+            transition: box-shadow 0.2s, transform 0.2s;
         }
+        .feat-card:hover { box-shadow: 0 8px 24px rgba(0,0,0,0.09); transform: translateY(-3px); }
+        .feat-card.fc-green  { border-top-color: var(--accent2); }
+        .feat-card.fc-yellow { border-top-color: #f59e0b; }
+        .feat-card.fc-blue   { border-top-color: var(--accent); }
+        .feat-card.fc-purple { border-top-color: #7c3aed; }
 
-        .live-indicator {
-            display: inline-block;
-            width: 10px;
-            height: 10px;
-            background-color: var(--success-color);
-            border-radius: 50%;
-            margin-right: 5px;
-            animation: pulse 2s infinite;
+        .feat-ic-wrap {
+            width: 48px; height: 48px; border-radius: 13px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.2rem; margin-bottom: 14px; flex-shrink: 0;
         }
+        .fic-green  { background: #f0fdf4; color: var(--accent2); }
+        .fic-yellow { background: #fefce8; color: #ca8a04; }
+        .fic-blue   { background: #eff6ff; color: var(--accent); }
+        .fic-purple { background: #f5f3ff; color: #7c3aed; }
 
-        @keyframes pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.5; }
-            100% { opacity: 1; }
+        .feat-title { font-size: 0.95rem; font-weight: 700; color: #1e293b; margin-bottom: 6px; }
+        .feat-desc  { font-size: 0.78rem; color: #64748b; line-height: 1.55; flex: 1; margin-bottom: 16px; }
+
+        /* Buttons */
+        .abt {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 9px 16px; border: none; border-radius: 9px;
+            font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: all 0.18s;
         }
+        .abt:hover { filter: brightness(1.06); transform: translateY(-1px); }
+        .abt.green  { background: linear-gradient(135deg, #10b981, #059669); color: #fff; }
+        .abt.yellow { background: linear-gradient(135deg, #f59e0b, #d97706); color: #fff; }
+        .abt.blue   { background: linear-gradient(135deg, #3b82f6, #6366f1); color: #fff; }
+        .abt.purple { background: linear-gradient(135deg, #7c3aed, #6d28d9); color: #fff; }
+        .abt.ghost  { background: #fff; color: #475569; border: 1.5px solid #e2e8f0; }
+        .abt.w-full { width: 100%; justify-content: center; }
 
-        .system-status {
-            font-size: 0.9rem;
-            padding: 0.5rem 1rem;
-            border-radius: 20px;
-            background: rgba(46, 204, 113, 0.1);
-            border: 1px solid rgba(46, 204, 113, 0.3);
+        /* Dashboard link card */
+        .dash-link-card {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            border-radius: var(--card-r); padding: 22px 24px;
+            display: flex; align-items: center; justify-content: space-between; gap: 20px;
+            box-shadow: 0 4px 18px rgba(15,23,42,0.2); margin-bottom: 18px;
         }
-
-        footer {
-            margin-top: 3rem;
-            padding: 2rem 0;
-            background: rgba(0,0,0,0.8);
-            color: white;
-            border-radius: 20px 20px 0 0;
+        .dlc-left { display: flex; align-items: center; gap: 16px; }
+        .dlc-ic {
+            width: 52px; height: 52px; border-radius: 14px; flex-shrink: 0;
+            background: rgba(59,130,246,0.2); color: var(--accent);
+            display: flex; align-items: center; justify-content: center; font-size: 1.3rem;
         }
+        .dlc-title { color: #fff; font-size: 1rem; font-weight: 700; margin-bottom: 3px; }
+        .dlc-sub   { color: rgba(255,255,255,0.45); font-size: 0.78rem; }
 
+        /* Overview text */
+        .ov-text { font-size: 0.85rem; color: #475569; line-height: 1.7; }
+
+        /* ══ TOASTS ══ */
+        .tc { position: fixed; top: 20px; right: 20px; z-index: 99999; display: flex; flex-direction: column; gap: 7px; }
+        .tm {
+            padding: 11px 16px; border-radius: 10px; font-size: 0.8rem; font-weight: 500;
+            display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 14px rgba(0,0,0,0.1);
+            animation: tslide 0.28s ease;
+        }
+        @keyframes tslide { from { transform: translateX(50px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        .tm.success { background: #ecfdf5; color: #065f46; border-left: 4px solid var(--accent2); }
+        .tm.warning { background: #fffbeb; color: #92400e; border-left: 4px solid #f59e0b; }
+        .tm.info    { background: #eff6ff; color: #1e40af; border-left: 4px solid var(--accent); }
+
+        /* ══ MOBILE TOPBAR ══ */
+        .mob-topbar {
+            display: none; position: fixed; top: 0; left: 0; right: 0; height: 56px;
+            background: var(--sidebar-bg); z-index: 200;
+            align-items: center; padding: 0 14px; gap: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+        .mob-topbar .mtb-ham {
+            width: 36px; height: 36px; border-radius: 9px; border: none;
+            background: rgba(255,255,255,0.08); color: #fff;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1rem; cursor: pointer; flex-shrink: 0;
+        }
+        .mob-topbar .mtb-brand { color: #fff; font-weight: 700; font-size: 0.92rem; flex: 1; }
+        .mob-topbar .mtb-brand span { color: rgba(255,255,255,0.4); font-weight: 400; font-size: 0.72rem; margin-left: 5px; }
+
+        /* ══ SIDEBAR OVERLAY ══ */
+        .sb-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 150; }
+        .sb-overlay.show { display: block; }
+
+        /* ══ RESPONSIVE ══ */
+        @media (max-width: 1024px) and (min-width: 769px) {
+            .sidebar { transform: translateX(-100%); transition: transform 0.28s cubic-bezier(.4,0,.2,1); z-index: 160; }
+            .sidebar.open { transform: translateX(0); }
+            .mob-topbar { display: flex; }
+            .main { margin-left: 0; padding: 78px 20px 30px; }
+            .kpi-row { grid-template-columns: repeat(2,1fr); }
+            .feat-grid { grid-template-columns: 1fr; }
+        }
         @media (max-width: 768px) {
-            .dashboard-full-card { flex-direction: column; text-align: center; }
-            .dashboard-full-card .feature-button { width: 100%; }
+            .sidebar { transform: translateX(-100%); transition: transform 0.28s cubic-bezier(.4,0,.2,1); z-index: 160; }
+            .sidebar.open { transform: translateX(0); }
+            .mob-topbar { display: flex; }
+            .main { margin-left: 0; padding: 70px 16px 30px; }
+            .kpi-row { grid-template-columns: repeat(2,1fr); gap: 10px; }
+            .feat-grid { grid-template-columns: 1fr; gap: 12px; }
+            .dash-link-card { flex-direction: column; align-items: flex-start; gap: 14px; }
+        }
+        @media (max-width: 575px) {
+            .main { padding: 66px 12px 30px; }
+            .kpi-row { grid-template-columns: repeat(2,1fr); gap: 8px; }
+            .pg-title h2 { font-size: 1.1rem; }
+            .pg-header { flex-wrap: wrap; gap: 10px; }
         }
     </style>
-</head>
-<body>
-    <nav class="navbar navbar-expand-lg navbar-dark" style="background-color: rgba(0,0,0,0.8);">
-        <div class="container">
-            <a class="navbar-brand" href="/">
-                <i class="fas fa-bus me-2"></i>Travel Agent Supporting Tool
-            </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item">
-                        <a class="nav-link active" href="/">Home</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/history">History</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/about">About</a>
-                    </li>
-                </ul>
-                <div class="system-status ms-3">
-                    <span class="live-indicator"></span> System Ready
-                </div>
-            </div>
+{% endblock %}
+
+{% block content %}
+<!-- Page header -->
+    <div class="pg-header">
+        <div class="pg-title">
+            <h2><i class="fas fa-bus me-2" style="color:var(--accent)"></i>Travel Agent Supporting Tool</h2>
+            <p>Comprehensive AI-powered tools for travel agency operations</p>
         </div>
-    </nav>
-
-    <div class="container">
-        <div class="hero-section">
-            <h1 class="main-title">Travel Agent Supporting Tool</h1>
-            <p class="subtitle">A comprehensive suite of intelligent tools designed to enhance passenger safety, optimize operations, and maximize profitability for travel agencies.</p>
-
-            <div class="system-overview">
-                <h2 class="overview-title">System Overview</h2>
-                <p class="overview-description">
-                    Our Travel Agent Supporting Tool integrates multiple advanced features to provide a complete solution for modern travel agencies. From passenger safety monitoring to driver assessment and profit optimization, this tool ensures operational excellence while maintaining the highest safety standards. The system uses AI and machine learning to provide real-time insights and automated recommendations.
-                </p>
-            </div>
-
-            <div class="dashboard-full-card">
-                <div class="d-flex align-items-center">
-                    <i class="fas fa-tachometer-alt feature-icon icon-dashboard me-4 mb-0"></i>
-                    <div>
-                        <h3 class="feature-title text-start mb-1">Live Operational Dashboard</h3>
-                        <p class="feature-description text-start mb-0">
-                            Real-time monitoring showing system activities, alerts, and statistics. Track passenger movements and performance in one interface.
-                        </p>
-                    </div>
-                </div>
-                <div style="min-width: 250px;">
-                    <button class="feature-button" style="background: var(--secondary-color); color: white;" onclick="openDashboard()">
-                        <i class="fas fa-chart-bar me-2"></i>Open Full Dashboard
-                    </button>
-                </div>
-            </div>
-
-            <h2 class="text-center mt-5 mb-4" style="color: var(--primary-color);">Main Features</h2>
-            <div class="feature-grid">
-                <div class="feature-card card-passenger">
-                    <i class="fas fa-camera feature-icon icon-passenger"></i>
-                    <h3 class="feature-title">Passenger Anomaly Detection</h3>
-                    <p class="feature-description">
-                        Advanced AI-powered system that detects appearance changes and suspicious behavior in passengers using GAN technology in real-time.
-                    </p>
-                    <button class="feature-button" style="background: var(--success-color); color: white;" onclick="window.location.href='/capture'">
-                        <i class="fas fa-video me-2"></i>Capture Entrance & Exit
-                    </button>
-                </div>
-
-                <div class="feature-card card-driver">
-                    <i class="fas fa-user-shield feature-icon icon-driver"></i>
-                    <h3 class="feature-title">Driver Anomaly Detection</h3>
-                    <p class="feature-description">
-                        Monitor driver behavior in real-time. Detects fatigue, distraction, and unsafe driving patterns to ensure high quality standards.
-                    </p>
-                    <button class="feature-button" style="background: var(--warning-color); color: white;" onclick="openDrivingAbility()">
-                        <i class="fas fa-user-clock me-2"></i>Check Driver Anomaly
-                    </button>
-                </div>
-
-                <div class="feature-card card-profit">
-                    <i class="fas fa-chart-line feature-icon icon-profit"></i>
-                    <h3 class="feature-title">Profit Assessment</h3>
-                    <p class="feature-description">
-                        Comprehensive profit analysis and optimization tool. Calculates operational costs and predicts profitability for route optimization.
-                    </p>
-                    <button class="feature-button" style="background: var(--info-color); color: white;" onclick="window.location.href='/profit_assessment'">
-                        <i class="fas fa-calculator me-2"></i>Assess Profit
-                    </button>
-                </div>
-
-                <div class="feature-card card-other">
-                    <i class="fas fa-cogs feature-icon icon-other"></i>
-                    <h3 class="feature-title">Other Features</h3>
-                    <p class="feature-description">
-                        Additional tools including travel history analysis, reporting systems, maintenance scheduling, and customer feedback management.
-                    </p>
-                    <button class="feature-button" style="background: #9b59b6; color: white;" onclick="openOtherFeatures()">
-                        <i class="fas fa-tools me-2"></i>Explore More
-                    </button>
-                </div>
-            </div>
-
-            <div class="quick-stats">
-                <div class="stat-card">
-                    <div class="stat-number" id="totalPassengers">0</div>
-                    <div class="stat-label">Total Passengers Today</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-number" id="activeDrivers">0</div>
-                    <div class="stat-label">Active Drivers</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-number" id="anomalies">0</div>
-                    <div class="stat-label">Anomalies Detected</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-number" id="profitToday">LKR 0</div>
-                    <div class="stat-label">Today's Profit</div>
-                </div>
-            </div>
+        <div class="pg-actions">
+            <div class="live-pill"><div class="live-dot"></div> System Ready</div>
         </div>
     </div>
 
-    <footer>
-        <div class="container text-center">
-            <p class="mb-2">© 2024 Travel Agent Supporting Tool. All rights reserved.</p>
-            <p class="text-muted">Powered by AI & Machine Learning Technologies</p>
+    <!-- KPI strip -->
+    <div class="kpi-row">
+        <div class="kpi-c">
+            <div class="kpi-ic blue"><i class="fas fa-users"></i></div>
+            <div class="kpi-body"><div class="kv" id="totalPassengers">0</div><div class="kl">Total Passengers Today</div></div>
         </div>
-    </footer>
+        <div class="kpi-c">
+            <div class="kpi-ic green"><i class="fas fa-id-badge"></i></div>
+            <div class="kpi-body"><div class="kv" id="activeDrivers">0</div><div class="kl">Active Drivers</div></div>
+        </div>
+        <div class="kpi-c">
+            <div class="kpi-ic red"><i class="fas fa-exclamation-triangle"></i></div>
+            <div class="kpi-body"><div class="kv" id="anomalies">0</div><div class="kl">Anomalies Detected</div></div>
+        </div>
+        <div class="kpi-c">
+            <div class="kpi-ic yellow"><i class="fas fa-coins"></i></div>
+            <div class="kpi-body"><div class="kv" id="profitToday">LKR 0</div><div class="kl">Today's Profit</div></div>
+        </div>
+    </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
-    <script>
-        const socket = io();
+    <!-- Dashboard quick-link -->
+    <div class="dash-link-card">
+        <div class="dlc-left">
+            <div class="dlc-ic"><i class="fas fa-tachometer-alt"></i></div>
+            <div>
+                <div class="dlc-title">Live Operational Dashboard</div>
+                <div class="dlc-sub">Real-time monitoring — passenger movements, alerts, and journey statistics in one interface</div>
+            </div>
+        </div>
+        <button class="abt blue" onclick="window.location='/dashboard'">
+            <i class="fas fa-chart-bar"></i> Open Full Dashboard
+        </button>
+    </div>
 
-        document.addEventListener('DOMContentLoaded', function() {
-            loadDashboardStats();
-            socket.on('passenger_entered', () => loadDashboardStats());
-            socket.on('passenger_exit', (data) => {
-                loadDashboardStats();
-                showNotification(`Passenger ${data.passenger_id} exited`, data.anomaly ? 'warning' : 'success');
-            });
+    <!-- System overview -->
+    <div class="pc">
+        <div class="pc-hdr">
+            <div class="pc-hdr-ic pc-hdr-ic-blue"><i class="fas fa-info-circle"></i></div>
+            <h5>System Overview</h5>
+        </div>
+        <div class="pc-body">
+            <p class="ov-text">
+                Our Travel Agent Supporting Tool integrates multiple advanced features to provide a complete solution for modern travel agencies. From passenger safety monitoring to driver assessment and profit optimization, this tool ensures operational excellence while maintaining the highest safety standards. The system uses AI and machine learning to provide real-time insights and automated recommendations.
+            </p>
+        </div>
+    </div>
+
+    <!-- Feature cards -->
+    <div class="pc" style="margin-bottom:0;">
+        <div class="pc-hdr">
+            <div class="pc-hdr-ic pc-hdr-ic-purple"><i class="fas fa-th-large"></i></div>
+            <h5>Main Features</h5>
+        </div>
+        <div class="pc-body">
+            <div class="feat-grid">
+
+                <div class="feat-card fc-green">
+                    <div class="feat-ic-wrap fic-green"><i class="fas fa-camera"></i></div>
+                    <div class="feat-title">Passenger Anomaly Detection</div>
+                    <div class="feat-desc">Advanced AI-powered system that detects appearance changes and suspicious behaviour in passengers using GAN technology in real-time.</div>
+                    <button class="abt green w-full" onclick="window.location='/capture'">
+                        <i class="fas fa-video"></i> Capture Entrance &amp; Exit
+                    </button>
+                </div>
+
+                <div class="feat-card fc-yellow">
+                    <div class="feat-ic-wrap fic-yellow"><i class="fas fa-user-shield"></i></div>
+                    <div class="feat-title">Driver Anomaly Detection</div>
+                    <div class="feat-desc">Monitor driver behaviour in real-time. Detects fatigue, distraction, and unsafe driving patterns to ensure high quality standards.</div>
+                    <button class="abt yellow w-full" onclick="window.location='/driving_ability'">
+                        <i class="fas fa-user-clock"></i> Check Driver Anomaly
+                    </button>
+                </div>
+
+                <div class="feat-card fc-blue">
+                    <div class="feat-ic-wrap fic-blue"><i class="fas fa-chart-line"></i></div>
+                    <div class="feat-title">Profit Assessment</div>
+                    <div class="feat-desc">Comprehensive profit analysis and optimization tool. Calculates operational costs and predicts profitability for route optimization.</div>
+                    <button class="abt blue w-full" onclick="window.location='/profit_assessment'">
+                        <i class="fas fa-calculator"></i> Assess Profit
+                    </button>
+                </div>
+
+                <div class="feat-card fc-purple">
+                    <div class="feat-ic-wrap fic-purple"><i class="fas fa-cogs"></i></div>
+                    <div class="feat-title">Other Features</div>
+                    <div class="feat-desc">Additional tools including travel history analysis, reporting systems, maintenance scheduling, and customer feedback management.</div>
+                    <button class="abt purple w-full" onclick="window.location='/other'">
+                        <i class="fas fa-tools"></i> Explore More
+                    </button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+<script>
+    const socket = io();
+
+    document.addEventListener('DOMContentLoaded', function () {
+        loadStats();
+        socket.on('passenger_entered', () => loadStats());
+        socket.on('passenger_exit', (data) => {
+            loadStats();
+            showToast(`Passenger ${data.passenger_id} exited — ${data.anomaly ? 'ANOMALY DETECTED' : 'Normal'}`,
+                      data.anomaly ? 'warning' : 'success');
         });
+    });
 
-        function loadDashboardStats() {
-            fetch('/api/dashboard_stats')
-                .then(response => response.json())
-                .then(data => {
-                    document.getElementById('totalPassengers').textContent = data.total_passengers || 0;
-                    document.getElementById('activeDrivers').textContent = data.active_drivers || 0;
-                    document.getElementById('anomalies').textContent = data.anomalies || 0;
-                    document.getElementById('profitToday').textContent = 'LKR ' + (data.profit_today || 0).toLocaleString();
-                })
-                .catch(error => console.error('Error loading stats:', error));
-        }
+    function loadStats() {
+        fetch('/api/dashboard_stats')
+            .then(r => r.json())
+            .then(d => {
+                set('totalPassengers',  d.total_passengers || 0);
+                set('activeDrivers',    d.active_drivers   || 0);
+                set('anomalies',        d.anomalies        || 0);
+                set('profitToday',     'LKR ' + ((d.profit_today || 0)).toLocaleString());
+                set('sb-passengers',   d.total_passengers || 0);
+                set('sb-anomalies',    d.anomalies        || 0);
+                set('sb-drivers',      d.active_drivers   || 0);
+                set('sb-journeys',     d.today_journeys   || 0);
+            })
+            .catch(e => console.error('Stats error:', e));
+    }
 
-        function openDashboard() { window.location.href = '/dashboard'; }
-        function openDrivingAbility() { window.location.href = '/driving_ability'; }
-        function openDrunkardDetection() { window.location.href = '/drunkard_level'; }
-        function openOtherFeatures() { window.location.href = '/other'; }
+    function set(id, val) {
+        const el = document.getElementById(id);
+        if (el) el.textContent = val;
+    }
 
-        function showNotification(message, type = 'info') {
-            const alertClass = {'success': 'alert-success', 'warning': 'alert-warning'}[type] || 'alert-info';
-            const notification = document.createElement('div');
-            notification.className = `alert ${alertClass} alert-dismissible fade show position-fixed`;
-            notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
-            notification.innerHTML = `${message}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>`;
-            document.body.appendChild(notification);
-            setTimeout(() => { if (notification.parentNode) notification.remove(); }, 5000);
-        }
-    </script>
-</body>
-</html>
+    function toggleSidebar() {
+        document.getElementById('sidebar').classList.toggle('open');
+        document.getElementById('sbOverlay').classList.toggle('show');
+    }
+    function closeSidebar() {
+        document.getElementById('sidebar').classList.remove('open');
+        document.getElementById('sbOverlay').classList.remove('show');
+    }
+
+    function showToast(msg, type = 'info') {
+        const tc = document.getElementById('toastContainer');
+        const t  = document.createElement('div');
+        t.className = `tm ${type}`;
+        const icons = { warning: 'fa-exclamation-triangle', success: 'fa-check-circle', info: 'fa-info-circle' };
+        t.innerHTML = `<i class="fas ${icons[type] || icons.info}"></i>${msg}`;
+        tc.appendChild(t);
+        setTimeout(() => t.remove(), 5000);
+    }
+</script>
+{% endblock %}

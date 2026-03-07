@@ -1,7 +1,6 @@
 import os
 import cv2
 import numpy as np
-import pickle
 import logging
 import random
 
@@ -33,31 +32,23 @@ class DriverBehaviorAnalyzer:
         self.load_models()
 
     def load_models(self):
-        """Attempt to load the ensemble wrapper and metadata from b_model dir"""
+        """Load vgg16_transfer_model.keras from b_model dir."""
         try:
-            # Check if directory exists
             if not os.path.exists(self.model_dir):
                 logger.warning(f"Model directory '{self.model_dir}' not found. Using simulation mode.")
                 return
 
-            # Attempt to load the ensemble model
-            wrapper_path = os.path.join(self.model_dir, 'ensemble_wrapper.pkl')
-            if os.path.exists(wrapper_path):
-                with open(wrapper_path, 'rb') as f:
-                    self.model = pickle.load(f)
+            model_path = os.path.join(self.model_dir, 'vgg16_transfer_model.keras')
+            if os.path.exists(model_path):
+                from tensorflow.keras.models import load_model
+                self.model = load_model(model_path)
                 self.model_loaded = True
-                logger.info("Driver behavior ensemble model loaded successfully.")
+                logger.info("Driver behavior model (vgg16_transfer_model.keras) loaded successfully.")
             else:
-                logger.warning("ensemble_wrapper.pkl not found. Using simulation mode.")
-
-            # Attempt to load metadata/labels if available
-            labels_path = os.path.join(self.model_dir, 'labels_list_vgg16.pkl')
-            if os.path.exists(labels_path):
-                with open(labels_path, 'rb') as f:
-                    self.labels_list = pickle.load(f)
+                logger.warning(f"{model_path} not found. Using simulation mode.")
 
         except Exception as e:
-            logger.error(f"Error loading driver behavior models: {e}. Falling back to simulation.")
+            logger.error(f"Error loading driver behavior model: {e}. Falling back to simulation.")
             self.model_loaded = False
 
     def analyze_frame(self, frame):
@@ -66,17 +57,13 @@ class DriverBehaviorAnalyzer:
             return self._simulate_analysis()
 
         try:
-            # Standard preprocessing for VGG16/ResNet type models (224x224 RGB)
-            from tensorflow.keras.preprocessing.image import img_to_array
-            from tensorflow.keras.applications.vgg16 import preprocess_input
+            # Model expects 64x64 RGB, float32, normalised /255 then -0.5
+            img = cv2.resize(frame, (64, 64))
+            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+            img_array = img.astype(np.float32) / 255.0 - 0.5
+            img_array = np.expand_dims(img_array, axis=0)  # (1, 64, 64, 3)
 
-            img = cv2.resize(frame, (224, 224))
-            img_array = img_to_array(img)
-            img_array = np.expand_dims(img_array, axis=0)
-            img_array = preprocess_input(img_array)
-
-            # Predict using the loaded model
-            preds = self.model.predict(img_array)
+            preds = self.model.predict(img_array, verbose=0)
             class_idx = np.argmax(preds[0])
             class_id = f'c{class_idx}'
             confidence = float(preds[0][class_idx])

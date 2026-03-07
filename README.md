@@ -1,161 +1,223 @@
-# Bus-Research-373 🚍📊
+# 🚍 Bus-Research-373  
+### IoT-Integrated Smart Bus Monitoring and ML-Driven Owner Awareness Platform
 
-[![Python](https://img.shields.io/badge/Python-3.12-blue?logo=python)](https://www.python.org/) 
-[![TensorFlow](https://img.shields.io/badge/TensorFlow-2.x-orange?logo=tensorflow)](https://www.tensorflow.org/) 
-[![MongoDB](https://img.shields.io/badge/MongoDB-Atlas-green?logo=mongodb)](https://www.mongodb.com/) 
-[![Flask](https://img.shields.io/badge/Flask-2.x-lightgrey?logo=flask)](https://flask.palletsprojects.com/)  
-
----
-
-## **Development of an IoT-Based Smart Bus System with Machine Learning-Powered Enhancements for Owner Awareness**
+[![Python](https://img.shields.io/badge/Python-3.10+-blue?logo=python)](https://www.python.org/)  
+[![TensorFlow Lite](https://img.shields.io/badge/TFLite-Edge%20Optimized-orange?logo=tensorflow)](https://www.tensorflow.org/lite)  
+[![MongoDB](https://img.shields.io/badge/MongoDB-Atlas-green?logo=mongodb)](https://www.mongodb.com/)  
+[![Flask](https://img.shields.io/badge/Flask-Production-lightgrey?logo=flask)](https://flask.palletsprojects.com/)  
 
 ---
 
-## **Abstract** 📝
-
-Income leakage, unsafe driving behavior, and lack of operational transparency are major challenges in Sri Lanka’s private bus transportation system. Conductors and drivers often under-report ticket revenue, buses operate without real-time tracking, and owners have no independent method to verify operational data.
-
-This research proposes a **Smart Bus Monitoring and Analytics Platform** that integrates **IoT devices, computer vision, machine learning, and cloud-based analytics** to provide:
-
-- Real-time passenger tracking  
-- Automated revenue verification  
-- Anomaly detection  
-- Profit forecasting  
-- Driver safety monitoring  
-
-The system combines edge-level IoT data collection, AI-based vision and learning models, and web-based dashboards to deliver a **secure, transparent, and intelligent transport management platform** for bus owners.
+# Development of an IoT-Based Smart Bus System with Machine Learning-Powered Enhancements for Owner Awareness
 
 ---
 
-## **System Objectives** 🎯
+## Abstract
 
-- Prevent income leakage using automated passenger counting and AI-based anomaly detection  
-- Predict profits, demand, and route performance using ML  
-- Detect driver alcohol usage and unsafe behavior  
-- Ensure zero data loss using offline-first IoT logging  
-- Provide real-time and historical analytics to bus owners  
-- Protect passenger privacy via embedding-based vision processing  
+Sri Lanka’s private bus transportation sector faces systemic challenges including revenue leakage, lack of operational transparency, unsafe driving practices, and absence of independent verification mechanisms for owners.
 
----
+This research presents a **modular, IoT-integrated Smart Bus Monitoring Platform** combining:
 
-## System Architecture 🏗️
+- Edge-level embedded systems  
+- Computer vision–based passenger re-identification  
+- Lightweight TensorFlow Lite inference  
+- Machine learning–based revenue prediction  
+- Driver behavioral anomaly detection  
+- Cloud-synchronized analytics dashboards  
 
-Here is the overall system architecture diagram for the project:
-
-![Overall System Diagram](docs/Overall%20Diagram.png)
-
-**Description:**  
-
-1. **Bus IoT Layer** – ESP32 microcontroller, GPS module, passenger camera, alcohol sensor, SD card storage for offline-first logging  
-2. **Cloud Backend** – Flask API for ML inference, data aggregation, alerts, and database sync  
-3. **Owner Dashboard** – Web interface for live monitoring, revenue reports, anomaly alerts, and predictive insights  
+The system operates using **embedding-based visual recognition rather than raw image storage**, ensuring privacy preservation while maintaining operational integrity.
 
 ---
 
-## **Research Components (Member-Wise)** 👥
+## System Objectives
 
-### **1. Passenger Appearance Anomaly Detection (GAN-Based)**  
+- Prevent income leakage through appearance-based passenger re-identification  
+- Detect identity mismatches at exit using embedding similarity thresholds  
+- Provide driver behavior anomaly monitoring  
+- Enable profit prediction using ML regression models  
+- Maintain privacy by avoiding raw facial image storage  
+- Support low-resource edge deployment (≤2GB RAM systems)  
+- Ensure offline data integrity via IoT storage buffering  
+
+---
+
+## System Architecture
+
+### Multi-Layer Architecture Overview
+
+### 1️⃣ Edge Layer (Bus Hardware Unit)
+- Raspberry Pi 4 (2GB)  
+- Camera module  
+- ESP32 microcontroller  
+- GPS module  
+- Alcohol sensor  
+- SD card (offline storage)  
+
+### 2️⃣ AI Inference Layer
+- TensorFlow Lite embedding model (128-dimensional vectors)  
+- Cosine similarity–based passenger matching  
+- Calibrated threshold decision engine  
+- Multi-frame embedding comparison  
+
+### 3️⃣ Backend Layer
+- Flask REST API  
+- Flask-SocketIO real-time communication  
+- MongoDB database  
+- Session-based RAM embedding storage  
+
+### 4️⃣ Analytics & Dashboard Layer
+- Real-time monitoring  
+- Journey summaries  
+- Driver scoring  
+- Revenue analysis  
+- Anomaly logs  
+
+---
+
+## Core Research Components
+
+---
+
+### 1️⃣ Passenger Appearance Re-Identification (Embedding-Based)
+
 **Contributor:** Sandev Jayaweera  
-**Notebook:** `gan-for-passenger-appearance-anomaly-detection.ipynb`  
 
-**Description:**  
-- Detects fraud and suspicious passenger behavior using a **Generative Adversarial Network (GAN)**  
-- Extracts deep visual embeddings instead of storing images  
-- Flags anomalies such as repeated boarding, fare-evasion, or abnormal movement  
+#### Problem Addressed
+Manual fare collection enables under-reporting and fraudulent exit events.  
+The system verifies passenger identity at entry and exit without storing images.
 
-**Why GAN?**  
-- Learns “normal” behavior without labeled fraud data  
-- Provides reconstruction-based anomaly scoring  
-- Ideal for unsupervised real-world surveillance  
+#### Model Architecture
+- Lightweight CNN backbone (MobileNet-based embedding model)  
+- Converted to **TensorFlow Lite (FP16)**  
+- Outputs **128-dimensional L2-normalized embeddings**  
+- Cosine similarity used for comparison  
 
-**Technologies:** TensorFlow / Keras, OpenCV, Feature embeddings + GAN discriminator  
+#### Matching Logic
+1. Capture 3–5 images at entry  
+2. Extract embeddings  
+3. Capture 3–5 images at exit  
+4. Compute all pairwise cosine similarities  
+5. Calculate average similarity  
+6. Compare against calibrated threshold (e.g., 0.80)  
+
+**Decision Rule:**
+- Similarity ≥ Threshold → MATCH  
+- Similarity < Threshold → MISMATCH  
+
+#### Why Embedding-Based Instead of GAN?
+
+| GAN Approach | Embedding Approach |
+|--------------|-------------------|
+| Reconstruction-based anomaly scoring | Identity-focused feature vectors |
+| Higher computational cost | Lightweight & edge deployable |
+| Sensitive to background variations | Robust similarity-based separation |
+| Harder to optimize for Raspberry Pi | TFLite optimized for CPU |
+
+The embedding approach provided:
+- Better separation margin  
+- Lower false positives  
+- Faster inference  
+- Real-time feasibility on Raspberry Pi  
 
 ---
 
-### **2. Alcohol Level Detection System** 🍷  
+### 2️⃣ Driver Behavior & Alcohol Monitoring
+
 **Contributor:** Jaladhi  
-**Notebook:** `alcohol-level-detection.ipynb`  
 
-**Description:**  
-- Detects driver alcohol influence using sensor readings from ESP32  
-- Classifies driver state: sober, mildly intoxicated, unsafe to drive  
-- Generates real-time alerts to bus owners  
-
-**Technologies:** Sensor-based data acquisition, Python ML classification, Flask API  
+- Alcohol sensor data classification  
+- Driver anomaly logging  
+- Journey-based driver scoring  
+- Time-window analytics  
 
 ---
 
-### **3. Bus Travel Profit Prediction Using Machine Learning** 💰  
+### 3️⃣ Bus Travel Profit Prediction
+
 **Contributor:** Sanduni  
-**Notebook:** `bus-travel-profit-prediction-using-ml.ipynb`  
 
-**Description:**  
-- Predicts revenue, demand, and profitability using historical and live bus data  
-- Supports route planning, trip scheduling, and investment decisions  
-- Outputs trip-wise revenue, time-based demand, and route/monthly profit trends  
-
-**Technologies:** Scikit-learn, Pandas, NumPy, Regression & ensemble ML models  
+- Historical revenue modeling  
+- Demand forecasting  
+- Route profitability prediction  
+- Regression-based ML models  
 
 ---
 
-### **4. IoT-Based Passenger Event & Revenue Collection System** 🛰️  
+### 4️⃣ IoT Revenue Integrity System
+
 **Contributor:** Nandun  
 
-**Description:**  
-- Cyber-physical backbone of the system  
-- Ensures **100% data integrity** for revenue and anomaly detection  
-
-**Hardware Architecture:**  
-- ESP32 central controller  
-- GPS module for boarding/drop-off location & timestamps  
-- Passenger camera  
-- Alcohol sensor for driver monitoring  
-- SD card for offline data storage  
-
-**Offline-First Design:**  
-- Data stored locally when network coverage is poor  
-- Automatic upload to backend when connectivity is restored  
+- GPS timestamping of boarding & drop-off  
+- Offline-first SD logging  
+- ESP32 event buffering  
+- Automatic backend synchronization  
+- Anti-tampering verification  
 
 ---
 
-## **Database Design (MongoDB)** 🗄️
+## Machine Learning Details (Passenger Re-ID)
+
+- **Embedding Size:** 128-Dimensional vector  
+- **Similarity Metric:** Cosine Similarity  
+- **Inference Backend:** TensorFlow Lite FP16  
+- **Deployment Target:** Raspberry Pi 4 (2GB RAM)  
+
+### Threshold Calibration Example
+- Same Person Mean Similarity ≈ 0.93  
+- Different Person Mean Similarity ≈ 0.55  
+- Selected Threshold = 0.80  
+
+---
+
+## Database Design (MongoDB)
 
 Collections:
 
-- `passenger_embeddings` – feature embeddings for passengers  
-- `journeys` – trip-level data  
-- `gps_logs` – boarding/drop-off GPS data  
-- `revenue_records` – collected fare records  
-- `alcohol_alerts` – driver alcohol warnings  
-- `anomaly_events` – passenger anomaly logs  
-- `system_logs` – operational and event logs  
+- `passengers`
+- `journeys`
+- `alerts`
+- `driver_scores`
+- `gps_logs`
+- `anomaly_events`
+- `system_logs`
 
-Indexes optimized for **real-time queries** and **historical analytics**.  
-
----
-
-## **Deployment Stack** 🛠️
-
-| Layer    | Technology                                    |
-|----------|-----------------------------------------------|
-| Edge     | ESP32, GPS, Camera, Alcohol Sensor, SD Card  |
-| Backend  | Flask, Python                                 |
-| AI Models| TensorFlow, Scikit-learn                      |
-| Database | MongoDB                                       |
-| Frontend | Web Dashboard                                 |
+Embeddings are stored temporarily in RAM during active bus turn  
+and cleared when the journey ends.
 
 ---
 
-## **Privacy & Ethics** 🔒
+## Privacy & Ethics
 
-- No raw passenger images are stored  
-- Only numerical embeddings are saved  
-- GPS and revenue data are encrypted  
-- Designed using privacy-by-design principles  
+- No permanent raw image storage  
+- Only numerical embeddings stored  
+- Session-based memory clearing  
+- Privacy-by-design architecture  
+- No biometric database retention  
 
 ---
 
-## **How to Run (Development)** 💻
+## Deployment Stack
+
+| Layer    | Technology |
+|----------|------------|
+| Edge     | Raspberry Pi 4, ESP32, Camera, GPS, Alcohol Sensor |
+| Backend  | Flask, Python |
+| AI       | TensorFlow Lite, Scikit-learn |
+| Database | MongoDB |
+| Frontend | Web Dashboard |
+
+---
+
+## Performance Characteristics
+
+- Embedding extraction: ~50–120ms (CPU)  
+- Multi-frame similarity decision: <300ms  
+- Optimized for 2GB RAM systems  
+- No GPU dependency  
+
+---
+
+## How to Run (Development)
 
 ```bash
 # Activate environment
@@ -163,6 +225,9 @@ source .venv/bin/activate
 
 # Install dependencies
 pip install -r requirements.txt
+
+# Ensure model exists
+models/embedding_model_fp16.tflite
 
 # Run backend
 python app.py
